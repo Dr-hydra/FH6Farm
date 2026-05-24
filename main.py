@@ -2602,7 +2602,7 @@ class FH_UltimateBot(ctk.CTk):
 
         pos_bs = self.wait_for_any_image(
             ["buyandsell-w.png", "buyandsell-b.png"],
-            region=self.regions["左"],
+            region=self.regions["上"],
             threshold=0.75,
             timeout=40,
             interval=0.5,
@@ -2616,7 +2616,7 @@ class FH_UltimateBot(ctk.CTk):
         time.sleep(1.0)
 
         self.hw_press("pagedown", delay=0.15)
-        time.sleep(0.5)
+        time.sleep(1.0)
 
         self.hw_press("enter")  # 进入我的车辆
         time.sleep(2.0)
@@ -2630,27 +2630,47 @@ class FH_UltimateBot(ctk.CTk):
         #驾驶收藏的车
         self.hw_press("enter")
         time.sleep(0.8)
-        self.hw_press("enter")
-        time.sleep(1.0)
-        #返回到车辆界面
-        for i in range(20):
+        pydirectinput.moveTo(10, 10)
+        pydirectinput.move(1, 1)
+
+        pos_buycar = self.wait_for_image(
+            "BNandUC.png",
+            region=self.regions["中间"],
+            threshold=0.75,
+            timeout=15,
+            interval=0.3,
+            fast_mode=True
+        )
+        if pos_buycar:
+            self.log("找到 BNandUC.png，执行点击")
+            self.safe_click(*pos_buycar)
+        else:
+            self.log("未找到 BNandUC.png，按 ESC")
+            self.hw_press("esc")
+            time.sleep(2.0)
+            self.hw_press("esc")
+        time.sleep(2.0)
+        found = False
+        for i in range(30):
             if not self.is_running:
                 return False
             pos = self.wait_for_any_image(
-                ["UandT-w.png", "UandT-b.png"],
-                region=self.regions["全界面"],
-                threshold=0.75,
+                ["buyandsell-b.png", "buyandsell-w.png"],
+                region=self.regions["上"],
+                threshold=0.70,
                 timeout=0.8,
                 interval=0.2,
                 fast_mode=True
             )
             if pos:
+                self.log(f"第 {i + 1} 次检测到 buyandsell，进入车辆界面")
                 self.hw_press("enter")
+                found = True
                 break
-            else:
-                self.hw_press("esc")
-        else:
-            self.log("20次内未找到升级与调校")
+            self.log(f"第 {i + 1} 次未检测到 buyandsell，等待后重试")
+            time.sleep(1.0)
+        if not found:
+            self.log("30次内未找到 buyandsell 标识")
             return False
         
         time.sleep(1.5)
@@ -2661,6 +2681,7 @@ class FH_UltimateBot(ctk.CTk):
         pydirectinput.moveTo(10, 10)
         pydirectinput.move(1, 1)
         #选择最近获得
+        self.log("切换到 最近获得 的排序...")
         for _ in range(6):
             if not self.is_running:
                 return False
@@ -2669,7 +2690,7 @@ class FH_UltimateBot(ctk.CTk):
         time.sleep(0.2)
         self.hw_press("enter")
         time.sleep(1.2)
-
+        self.log("回到最近获得的前面")
         # 回到列表首项
         self.hw_press("backspace")
         time.sleep(0.8)
@@ -2677,8 +2698,9 @@ class FH_UltimateBot(ctk.CTk):
         time.sleep(1.5)
 
         self.log("开始删除最近获得的车辆...")
-
-        while self.sc_counter < target_count:
+        
+        while self.sc_count < target_count:
+            self.log(f"is_running = {self.is_running}")
             if not self.is_running:
                 return False
             # 进入当前车辆
