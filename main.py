@@ -30,7 +30,7 @@ from pynput import keyboard
 from PIL import Image, ImageGrab
 import win32gui
 import pickle
-
+import threading
 
 # ==========================================
 # --- 路径与资源策略 ---
@@ -56,7 +56,7 @@ LOG_FILE = os.path.join(APP_DIR, "bot_log.txt")
 CACHE_DIR = os.path.join(APP_DIR, "cache")
 TEMPLATE_CACHE_FILE = os.path.join(CACHE_DIR, "template_cache.pkl")
 TEMPLATE_META_FILE = os.path.join(CACHE_DIR, "template_meta.json")
-CURRENT_VERSION = "1.1.2"
+CURRENT_VERSION = "1.1.3"
 
 def auto_extract_images(folder_name="images"):
     internal_dir = os.path.join(INTERNAL_DIR, folder_name)
@@ -124,9 +124,6 @@ def parse_version(v):
         return tuple(int(x) for x in str(v).split("."))
     except Exception:
         return (0, 0, 0)
-
-
-auto_extract_images()
 
 # ==========================================
 # --- Ctypes 硬件级键盘模拟结构体定义 ---
@@ -305,7 +302,12 @@ class FH_UltimateBot(ctk.CTk):
         self.scaled_edge_template_cache = {}
 
         self.init_regions()
-        self.prepare_template_cache()
+        
+                # 【优化加载速度】：将IO提取与图像缓存的加载/生成放到后台线程，避免阻塞主界面启动
+        def background_init():
+            auto_extract_images()
+            self.prepare_template_cache()
+        threading.Thread(target=background_init, daemon=True).start()
 
         #初始配置
         self.config = {
@@ -334,7 +336,7 @@ class FH_UltimateBot(ctk.CTk):
         self.update_skill_grid()
         self.center_window()
         self.log("免责声明：本脚本仅供 Python 自动化技术交流与学习使用。请勿用于商业盈利或破坏游戏平衡，因使用本脚本造成的账号封禁等损失，由使用者自行承担。")
-        self.log("默认刷图车辆：【斯巴鲁Impreza 22B-STi Version】【调校S1  900】【保持默认涂装】")
+        self.log("默认刷图车辆：【斯巴鲁Impreza 22B-STi Version】【调校S2  900】【保持默认涂装】【收藏车辆】")
         self.log("启动前先将键盘设置为【英文键盘】")
         self.log("游戏设置为【自动转向】【自动挡】，游戏语言设置为【简体中文】")
         self.log("大部分以图像识别作为引导，减少机器盲目操作的风险，但仍无法完全避免，使用前请做好准备")
@@ -1192,6 +1194,201 @@ class FH_UltimateBot(ctk.CTk):
             except Exception:
                 pass
         self.ui_call(write_ui)
+    def start_pipeline(self, start_step):
+        if self.is_running:
+            return
+
+        self.is_running = True
+        self.save_config()
+
+        # 隐藏大窗的所有元素
+        self.config_frame.pack_forget()
+        self.global_settings_frame.pack_forget()
+        self.calc_frame.pack_forget()
+        self.top_container.pack_forget()
+        if hasattr(self, "bottom_frame"):
+            self.bottom_frame.pack_forget()
+        self.btn_support.pack_forget()
+
+        # 显示新的迷你横向 UI
+        self.mini_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # ====== 计算 15% 高度 40% 宽度 ======
+        last_x, last_y, last_w, last_h = self.regions["全界面"]
+        if last_w <= 0: last_w = self.winfo_screenwidth()
+        if last_h <= 0: last_h = self.winfo_screenheight()
+
+        calc_w = int(last_w * 0.40)
+        calc_h = int(last_h * 0.15)
+        # 设置一个兜底最小值，防止分辨率过低时文字挤压导致崩溃
+        calc_w = max(calc_w, 650)
+        calc_h = max(calc_h, 150)
+
+        pos_x = last_x + last_w - calc_w - 20
+        pos_y = last_y + 20
+
+        self.attributes("-topmost", True)
+        self.geometry(f"{calc_w}x{calc_h}+{pos_x}+{pos_y}")
+        
+        # 启动计时器
+        self.start_time = time.time()
+        self.update_timer()
+
+        
+        self.update_running_ui("初始化中...")
+        self.race_counter = 0
+        self.car_counter = 0
+        self.cj_counter = 0
+        self.sc_count = 0
+        self.global_loop_current = 0
+
+        def runner():
+            if not self.check_and_focus_game():
+                self.stop_all()
+                return
+
+            steps = ["race", "buy", "cj", "sell"]
+            curr_idx = steps.index(start_step)
+
+            try:
+                total_loops = int(self.entry_global_loop.get())
+            except Exception:
+                total_loops = self.config.get("global_loops", 10)
+            self.global_loop_current = 1
+            if hasattr(self, "lbl_mini_loop"):
+                self.ui_call(self.lbl_mini_loop.configure, text=f"大循环: {self.global_loop_current} / {total_loops}")
+            while self.is_running:
+                step_name = steps[curr_idx]
+                success = False
+
+                try:
+                    if step_name == "race":
+                        success = self.logic_race(int(self.entry_race.get()))
+                    elif step_name == "buy":
+                        success = self.logic_buy_car(int(self.entry_car.get()))
+                    elif step_name == "cj":
+                        success = self.logic_super_wheelspin(int(self.entry_cj.get()))
+                    elif step_name == "sell":
+                        success = self.sell_consumable_car(int(self.entry_sc.get()))
+                except Exception as e:
+                    self.log(f"执行模块 {step_name} 时异常: {e}")
+                    success = False
+
+                if not self.is_running:
+                    break
+
+                if not success:
+                    if self.attempt_recovery():
+                        continue
+                    else:
+                        self.log("致命错误：断点恢复失败，彻底停止。")
+                        break
+                #v1.0.1
+                # ====== 核心流转与无限循环逻辑 ======
+                next_idx = curr_idx + 1 # 默认前往下一步
+                if curr_idx == 0:
+                    if self.var_chk1.get():
+                        try: next_idx = max(0, min(3, int(self.entry_next1.get()) - 1))
+                        except Exception: next_idx = 1
+                    else: break
+                elif curr_idx == 1:
+                    if self.var_chk2.get():
+                        try: next_idx = max(0, min(3, int(self.entry_next2.get()) - 1))
+                        except Exception: next_idx = 2
+                    else: break
+                elif curr_idx == 2:
+                    if self.var_chk3.get():
+                        try: next_idx = max(0, min(3, int(self.entry_next3.get()) - 1))
+                        except Exception: next_idx = 3
+                    else: break
+                elif curr_idx == 3:
+                    if self.var_chk4.get():
+                        try: next_idx = max(0, min(3, int(self.entry_next4.get()) - 1))
+                        except Exception: next_idx = 0
+                    else: break
+
+                if next_idx <= curr_idx:
+                    self.global_loop_current += 1
+                    
+                    if self.global_loop_current > total_loops:
+                        self.log("达到设定的总循环次数，任务圆满结束。")
+                        break
+                        
+                    self.log(f"开启新一轮大循环 ({self.global_loop_current}/{total_loops})")
+                    
+                    if hasattr(self, "lbl_mini_loop"):
+                        self.ui_call(self.lbl_mini_loop.configure, text=f"大循环: {self.global_loop_current} / {total_loops}")
+
+                    self.race_counter = 0
+                    self.car_counter = 0
+                    self.cj_counter = 0
+                    self.sc_count = 0
+                
+                curr_idx = next_idx
+
+            self.stop_all()
+
+        self.current_thread = threading.Thread(target=runner, daemon=True)
+        self.current_thread.start()
+
+    def stop_all(self):
+        if not self.is_running:
+            return
+
+        self.is_running = False
+
+        for key in DIK_CODES.keys():
+            self.hw_key_up(key)
+
+        for key in ["w", "e", "y", "enter", "esc", "up", "down", "left", "right", "space", "backspace"]:
+            self.hw_key_up(key)
+
+        try:
+            pydirectinput.mouseUp()
+        except Exception:
+            pass
+
+        def restore_ui():
+            if hasattr(self, "mini_frame"):
+                self.mini_frame.pack_forget()
+                
+            # 【核心修复】：先让大容器里的东西全部解绑，洗牌重来
+            self.config_frame.pack_forget()
+            self.global_settings_frame.pack_forget()
+            self.calc_frame.pack_forget()
+            
+            # 1. 铺设最外层大容器
+            self.top_container.pack(fill="x", padx=18, pady=(18, 10))
+            
+            # 2. 依次按顺序塞入三个模块，完美保证从上到下的顺序！
+            self.config_frame.pack(fill="x")
+            self.global_settings_frame.pack(fill="x", pady=(15, 0))
+            self.calc_frame.pack(fill="x", pady=(10, 0))
+            
+            # 3. 铺设底部的日志和按钮
+            if hasattr(self, "bottom_frame"):
+                self.bottom_frame.pack(fill="both", expand=True, padx=18, pady=(6, 12))
+            self.btn_support.pack(fill="x", padx=18, pady=(6, 12))
+            
+            # 恢复窗口原本的状态
+            self.btn_stop.configure(text="等待指令 (F8)", fg_color="#3A3A3A", hover_color="#4A4A4A")
+            self.attributes("-topmost", False)
+            self.geometry("1800x800")
+            self.center_window()
+
+        self.ui_call(restore_ui)
+        self.log("!!! 任务已停止，所有物理按键状态已强制重置")
+
+    def start_hotkey_listener(self):
+        def hotkey_thread():
+            def on_press(k):
+                if k == keyboard.Key.f8:
+                    self.stop_all()
+
+            with keyboard.Listener(on_press=on_press) as listener:
+                listener.join()
+
+        threading.Thread(target=hotkey_thread, daemon=True).start()
 
    
     # ==========================================
@@ -1587,7 +1784,7 @@ class FH_UltimateBot(ctk.CTk):
             if self.load_template_file_cache():
                 return
 
-        self.log("模板缓存不存在或已失效，开始重建...")
+        self.log("模板缓存不存在或已失效，开始后台重建（这可能需要几秒钟）...")
         if self.build_template_file_cache():
             self.template_cache.clear()
             self.scaled_template_cache.clear()
@@ -2203,189 +2400,6 @@ class FH_UltimateBot(ctk.CTk):
         except Exception:
             return 0.0
 
-    def start_pipeline(self, start_step):
-        if self.is_running:
-            return
-
-        self.is_running = True
-        self.save_config()
-
-                # 隐藏大窗的所有元素
-        self.config_frame.pack_forget()
-        self.global_settings_frame.pack_forget()
-        self.top_container.pack_forget()
-        if hasattr(self, "bottom_frame"):
-            self.bottom_frame.pack_forget()
-        self.btn_support.pack_forget()
-
-        # 显示新的迷你横向 UI
-        self.mini_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # ====== 计算 15% 高度 40% 宽度 ======
-        last_x, last_y, last_w, last_h = self.regions["全界面"]
-        if last_w <= 0: last_w = self.winfo_screenwidth()
-        if last_h <= 0: last_h = self.winfo_screenheight()
-
-        calc_w = int(last_w * 0.40)
-        calc_h = int(last_h * 0.15)
-        # 设置一个兜底最小值，防止分辨率过低时文字挤压导致崩溃
-        calc_w = max(calc_w, 650)
-        calc_h = max(calc_h, 150)
-
-        pos_x = last_x + last_w - calc_w - 20
-        pos_y = last_y + 20
-
-        self.attributes("-topmost", True)
-        self.geometry(f"{calc_w}x{calc_h}+{pos_x}+{pos_y}")
-        
-        # 启动计时器
-        self.start_time = time.time()
-        self.update_timer()
-
-        
-        self.update_running_ui("初始化中...")
-        self.race_counter = 0
-        self.car_counter = 0
-        self.cj_counter = 0
-        self.sc_count = 0
-        self.global_loop_current = 0
-
-        def runner():
-            if not self.check_and_focus_game():
-                self.stop_all()
-                return
-
-            steps = ["race", "buy", "cj", "sell"]
-            curr_idx = steps.index(start_step)
-
-            try:
-                total_loops = int(self.entry_global_loop.get())
-            except Exception:
-                total_loops = self.config.get("global_loops", 10)
-            self.global_loop_current = 1
-            if hasattr(self, "lbl_mini_loop"):
-                self.ui_call(self.lbl_mini_loop.configure, text=f"大循环: {self.global_loop_current} / {total_loops}")
-            while self.is_running:
-                step_name = steps[curr_idx]
-                success = False
-
-                try:
-                    if step_name == "race":
-                        success = self.logic_race(int(self.entry_race.get()))
-                    elif step_name == "buy":
-                        success = self.logic_buy_car(int(self.entry_car.get()))
-                    elif step_name == "cj":
-                        success = self.logic_super_wheelspin(int(self.entry_cj.get()))
-                    elif step_name == "sell":
-                        success = self.sell_consumable_car(int(self.entry_sc.get()))
-                except Exception as e:
-                    self.log(f"执行模块 {step_name} 时异常: {e}")
-                    success = False
-
-                if not self.is_running:
-                    break
-
-                if not success:
-                    if self.attempt_recovery():
-                        continue
-                    else:
-                        self.log("致命错误：断点恢复失败，彻底停止。")
-                        break
-                #v1.0.1
-                # ====== 核心流转与无限循环逻辑 ======
-                next_idx = curr_idx + 1 # 默认前往下一步
-                if curr_idx == 0:
-                    if self.var_chk1.get():
-                        try: next_idx = max(0, min(3, int(self.entry_next1.get()) - 1))
-                        except Exception: next_idx = 1
-                    else: break
-                elif curr_idx == 1:
-                    if self.var_chk2.get():
-                        try: next_idx = max(0, min(3, int(self.entry_next2.get()) - 1))
-                        except Exception: next_idx = 2
-                    else: break
-                elif curr_idx == 2:
-                    if self.var_chk3.get():
-                        try: next_idx = max(0, min(3, int(self.entry_next3.get()) - 1))
-                        except Exception: next_idx = 3
-                    else: break
-                elif curr_idx == 3:
-                    if self.var_chk4.get():
-                        try: next_idx = max(0, min(3, int(self.entry_next4.get()) - 1))
-                        except Exception: next_idx = 0
-                    else: break
-
-                if next_idx <= curr_idx:
-                    self.global_loop_current += 1
-                    
-                    if self.global_loop_current > total_loops:
-                        self.log("达到设定的总循环次数，任务圆满结束。")
-                        break
-                        
-                    self.log(f"开启新一轮大循环 ({self.global_loop_current}/{total_loops})")
-                    
-                    if hasattr(self, "lbl_mini_loop"):
-                        self.ui_call(self.lbl_mini_loop.configure, text=f"大循环: {self.global_loop_current} / {total_loops}")
-
-                    self.race_counter = 0
-                    self.car_counter = 0
-                    self.cj_counter = 0
-                    self.sc_count = 0
-                
-                curr_idx = next_idx
-
-            self.stop_all()
-
-        self.current_thread = threading.Thread(target=runner, daemon=True)
-        self.current_thread.start()
-
-    def stop_all(self):
-        if not self.is_running:
-            return
-
-        self.is_running = False
-
-        for key in DIK_CODES.keys():
-            self.hw_key_up(key)
-
-        for key in ["w", "e", "y", "enter", "esc", "up", "down", "left", "right", "space", "backspace"]:
-            self.hw_key_up(key)
-
-        try:
-            pydirectinput.mouseUp()
-        except Exception:
-            pass
-
-        def restore_ui():
-            if hasattr(self, "mini_frame"):
-                self.mini_frame.pack_forget()
-                
-            self.top_container.pack(fill="x", padx=18, pady=(18, 10))
-            self.config_frame.pack(fill="x")
-            self.global_settings_frame.pack(fill="x", pady=(15, 0))
-            if hasattr(self, "bottom_frame"):
-                self.bottom_frame.pack(fill="both", expand=True, padx=18, pady=(6, 12))
-            self.btn_support.pack(fill="x", padx=18, pady=(6, 12))
-            
-            self.btn_stop.configure(text="等待指令 (F8)", fg_color="#3A3A3A", hover_color="#4A4A4A")
-            self.attributes("-topmost", False)
-            self.geometry("1800x800")
-            self.center_window()
-
-        self.ui_call(restore_ui)
-        self.log("!!! 任务已停止，所有物理按键状态已强制重置")
-
-    def start_hotkey_listener(self):
-        def hotkey_thread():
-            def on_press(k):
-                if k == keyboard.Key.f8:
-                    self.stop_all()
-
-            with keyboard.Listener(on_press=on_press) as listener:
-                listener.join()
-
-        threading.Thread(target=hotkey_thread, daemon=True).start()
-
     # ==========================================
     # --- 模块：跑图前置与循环跑图 ---
     # ==========================================
@@ -2558,7 +2572,7 @@ class FH_UltimateBot(ctk.CTk):
             self.log(f"跑图 {self.race_counter + 1}/{target_count}: 找赛事起点...")
 
             pos = None
-            for _ in range(60):
+            for _ in range(1500):
                 if not self.is_running:
                     return False
 
@@ -2969,7 +2983,7 @@ class FH_UltimateBot(ctk.CTk):
         if self.sc_count >= target_count:
             return True
 
-        self.update_running_ui("移除车辆！！！使用前请人工核验到正常移除车辆再进行自动化移除处理", self.sc_count, target_count)
+        self.update_running_ui("移除车辆", self.sc_count, target_count)
 
         self.log("准备验证/进入菜单！！！使用前请人工核验到正常移除车辆再进行自动化移除处理")
         if not self.enter_menu():
