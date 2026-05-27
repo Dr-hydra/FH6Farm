@@ -19,6 +19,8 @@ obf_temp/
 dist/
 cache/
 other/
+oldversion/
+bk/
 
 # ========================
 # 4. 允许上传的内容（这部分不写，Git会自动识别）
