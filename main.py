@@ -93,40 +93,23 @@ CURRENT_VERSION = "1.1.5"
 def auto_extract_configs():
     os.makedirs(CONFIG_DIR, exist_ok=True)
     
-    # ====== 【新增：向下兼容，自动重命名并迁移老版本 bot_config】 ======
+    # 向下兼容，自动重命名并迁移老版本 bot_config
     old_configs = [
         os.path.join(APP_DIR, "bot_config.json"),
         os.path.join(APP_DIR, "bot-config.json"),
         os.path.join(CONFIG_DIR, "bot-config.json"),
         os.path.join(CONFIG_DIR, "bot_config.json"),
-        os.path.join(CONFIG_DIR, "config.json")  # <-- 如果之前在 config 文件夹里，就移到外面
+        os.path.join(CONFIG_DIR, "config.json")
     ]
     for old_path in old_configs:
         if os.path.exists(old_path):
             try:
-                # 如果新的 config.json 还不存在，就把老的重命名并移动过去
                 if not os.path.exists(USER_CONFIG_FILE):
                     shutil.move(old_path, USER_CONFIG_FILE)
                 else:
-                    # 如果新配置已经存在了，说明迁移过了，直接删掉多余的老文件
                     os.remove(old_path)
             except Exception:
                 pass
-    # ====================================================================
-
-    int_config_dir = os.path.join(INTERNAL_DIR, "assets", "config")
-
-    # 释放 example 并生成最终的 config.json
-    int_example = os.path.join(int_config_dir, "config-example.json")
-    example_dest = os.path.join(CONFIG_DIR, "config-example.json")
-    if os.path.exists(int_example):
-        try:
-            if not os.path.exists(example_dest):
-                shutil.copy2(int_example, example_dest)
-            # 如果用户的 config.json 不存在（且没发生老文件迁移），复制一份作为初始配置
-            if not os.path.exists(USER_CONFIG_FILE):
-                shutil.copy2(int_example, USER_CONFIG_FILE)
-        except Exception: pass
 def auto_extract_images(folder_name="images"):
     internal_dir = os.path.join(INTERNAL_DIR, folder_name)
     external_dir = os.path.join(APP_DIR, folder_name)
@@ -466,47 +449,38 @@ class FH_UltimateBot(ctk.CTk):
     # --- 配置管理 ---
     # ==========================================
     def load_config(self):
-        self.config = {}
+        # 1. 直接使用内置字典作为“绝对底本”（最安全，无视打包丢文件问题）
+        self.config = {
+            "race_count": 99,
+            "buy_count": 30, 
+            "cj_count": 30, 
+            "sc_count": 30,
+            "chk_1": True, 
+            "chk_2": True, 
+            "chk_3": True, 
+            "chk_4": True,
+            "next_1": 2, 
+            "next_2": 3, 
+            "next_3": 1, 
+            "next_4": 1,
+            "global_loops": 10, 
+            "skill_dirs": ["right", "up", "up", "up", "left"],
+            "share_code": "890169683", 
+            "auto_restart": False,
+            "restart_cmd": "start steam://run/2483190", 
+            "sell_mode": 1 
+        }
         ext_path = USER_CONFIG_FILE
-        int_path = os.path.join(INTERNAL_DIR, "assets", "config", "config-example.json")
-        # 1. 优先读取内置的完整配置，作为“兜底底本”
-        try:
-            with open(int_path, "r", encoding="utf-8") as f:
-                self.config = json.load(f)
-        except Exception as e:
-            self.log(f"无法读取内置配置，使用紧急硬编码兜底: {e}")
-            # 万一你在开发环境下没把 config-example.json 放对位置，这个能保命
-            self.config = {
-                "race_count": 99,
-                "buy_count": 30, 
-                "cj_count": 30, 
-                "sc_count": 30,
-                "chk_1": True, 
-                "chk_2": True, 
-                "chk_3": True, 
-                "chk_4": True,
-                "next_1": 2, 
-                "next_2": 3, 
-                "next_3": 1, 
-                "next_4": 1,
-                "global_loops": 10, 
-                "skill_dirs": ["right", "up", "up", "up", "left"],
-                "share_code": "890169683", 
-                "auto_restart": False,
-                "restart_cmd": "start steam://run/2483190", 
-                "sell_mode": 1 
-            }
-        # 2. 读取用户的配置，并与底本合并
+        # 2. 读取用户的 config.json，并与底本合并（自动补全缺失项）
         if os.path.exists(ext_path):
             try:
                 with open(ext_path, "r", encoding="utf-8") as f:
                     user_config = json.load(f)
-                    # 【核心魔法】：更新覆盖。缺失的键用默认值，存在的键用用户的值
                     self.config.update(user_config) 
             except Exception as e:
-                self.log(f"⚠️ 用户 config.json 损坏，将使用默认配置自动修复: {e}")
+                self.log(f"用户 config.json 损坏，已自动恢复默认配置。")
                 
-        # 3. 将补全后的完整配置重新写回文件，彻底修复用户的 JSON
+        # 3. 将最新、最完整的配置重新写回外置文件
         try:
             with open(ext_path, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=4, ensure_ascii=False)

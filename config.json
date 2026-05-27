@@ -1,5 +1,5 @@
 {
-    "race_count": 9,
+    "race_count": 10,
     "buy_count": 3,
     "cj_count": 3,
     "sc_count": 3,
@@ -22,10 +22,10 @@
     "share_code": "890169683",
     "auto_restart": false,
     "restart_cmd": "start steam://run/2483190",
+    "sell_mode": 1,
     "use_ocr": false,
     "ocr_lang": "简体中文",
     "calc_a": "10268096",
     "calc_b": "81700",
-    "calc_c": "30",
-    "sell_mode": 1
+    "calc_c": "30"
 }
