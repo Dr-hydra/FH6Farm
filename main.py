@@ -89,7 +89,7 @@ LOG_FILE = os.path.join(APP_DIR, "bot_log.txt")
 CACHE_DIR = os.path.join(APP_DIR, "cache")
 TEMPLATE_CACHE_FILE = os.path.join(CACHE_DIR, "template_cache.pkl")
 TEMPLATE_META_FILE = os.path.join(CACHE_DIR, "template_meta.json")
-CURRENT_VERSION = "1.1.5"
+CURRENT_VERSION = "1.1.5.2"
 def auto_extract_configs():
     os.makedirs(CONFIG_DIR, exist_ok=True)
     
@@ -1362,6 +1362,12 @@ class FH_UltimateBot(ctk.CTk):
             self.global_loop_current = 1
             if hasattr(self, "lbl_mini_loop"):
                 self.ui_call(self.lbl_mini_loop.configure, text=f"大循环: {self.global_loop_current} / {total_loops}")
+
+            # 【新增】：全局连续失败计数器
+            continuous_failures = 0 
+            # 【你可以修改这里】：设置全局允许的最大连续恢复次数（比如 3 次）
+            MAX_RECOVERIES = 10 
+
             while self.is_running:
                 step_name = steps[curr_idx]
                 success = False
@@ -1389,11 +1395,24 @@ class FH_UltimateBot(ctk.CTk):
                     break
 
                 if not success:
+                    continuous_failures += 1
+                    
+                    # 检查是否超过最大容忍次数
+                    if continuous_failures > MAX_RECOVERIES:
+                        self.log(f"!!! 警告：连续 {continuous_failures} 次触发断点恢复仍未能解决问题！")
+                        self.log("为防止游戏陷入死循环，强制终止当前所有任务，请人工检查游戏状态。")
+                        break # 直接跳出 while，停止脚本
+                        
+                    self.log(f"正在进行全局恢复 (第 {continuous_failures}/{MAX_RECOVERIES} 次允许的重试)...")
+                    
                     if self.attempt_recovery():
-                        continue
+                        continue # 恢复成功，回到 while 顶部再次尝试这个任务
                     else:
-                        self.log("致命错误：断点恢复失败，彻底停止。")
+                        self.log("致命错误：连退回菜单/重启也失败了，彻底停止。")
                         break
+                else:
+                    # 只要这一个大步骤成功跑完了，就把连续失败次数清零，奖励它继续跑！
+                    continuous_failures = 0
                 #v1.0.1
                 # ====== 核心流转与无限循环逻辑 ======
                 next_idx = curr_idx + 1 # 默认前往下一步
@@ -2180,9 +2199,114 @@ class FH_UltimateBot(ctk.CTk):
             return None
 
         except Exception as e:
-            self.log(f"⚠️ find_image_with_element_stable 识别报错: {e}")
+            self.log(f"find_image_with_element_stable 识别报错: {e}")
             return None
-    
+    def find_image_with_element_multi(self, main_path, sub_path, region=None, fast_mode=True,
+        main_threshold=0.60, like_threshold=0.75, final_threshold=0.72):
+        if not self.is_running:
+            return None
+
+        try:
+            screen_bgr = self.capture_region(region)
+            screen_gray = self.to_gray_image(screen_bgr)
+            screen_edge = self.to_edge_image(screen_bgr)
+
+            scales_to_try = self.get_scales_to_try(fast_mode=fast_mode)
+
+            for scale in scales_to_try:
+                main_tpl_c, _ = self.get_scaled_template(main_path, scale)
+                sub_tpl_c, _ = self.get_scaled_template(sub_path, scale)
+
+                if main_tpl_c is None or sub_tpl_c is None:
+                    continue
+
+                main_tpl_gray = self.to_gray_image(main_tpl_c)
+                main_tpl_edge = self.to_edge_image(main_tpl_c)
+
+                h_m, w_m = main_tpl_c.shape[:2]
+                if h_m < 5 or w_m < 5:
+                    continue
+                if h_m > screen_bgr.shape[0] or w_m > screen_bgr.shape[1]:
+                    continue
+
+                # 用彩色主模板先找候选，门槛放低
+                res_main = cv2.matchTemplate(screen_bgr, main_tpl_c, cv2.TM_CCOEFF_NORMED)
+                loc = np.where(res_main >= main_threshold)
+
+                # ==========================================
+                # 【核心魔法】：强制从左到右、从上到下排序！
+                # 保证在有多个相同目标时，绝对按顺序点击！
+                # ==========================================
+                points = list(zip(*loc[::-1]))
+                points.sort(key=lambda p: (p[1] // 50, p[0])) 
+
+                checked_points = set()
+
+                for pt in points:
+                    x, y = pt
+
+                    # 去重，避免同一辆车计算多次
+                    key = (x // 10, y // 10)
+                    if key in checked_points:
+                        continue
+                    checked_points.add(key)
+
+                    roi_bgr = screen_bgr[y:y + h_m, x:x + w_m]
+                    roi_gray = screen_gray[y:y + h_m, x:x + w_m]
+                    roi_edge = screen_edge[y:y + h_m, x:x + w_m]
+
+                    if roi_bgr.shape[:2] != main_tpl_c.shape[:2]:
+                        continue
+
+                    # 四维打分系统 (抗 HDR 核心)
+                    color_score = self.match_template_score(roi_bgr, main_tpl_c)
+                    gray_score = self.match_template_score(roi_gray, main_tpl_gray)
+                    edge_score = self.match_template_score(roi_edge, main_tpl_edge)
+
+                    roi_center = self.crop_center_ratio(roi_bgr, ratio=0.6)
+                    tpl_center = self.crop_center_ratio(main_tpl_c, ratio=0.6)
+                    center_score = self.match_template_score(roi_center, tpl_center)
+
+                    # 标签匹配 (NEW 标签或作者点赞标签)
+                    pad = 5
+                    sub_roi = screen_bgr[
+                        max(0, y - pad):min(screen_bgr.shape[0], y + h_m + pad),
+                        max(0, x - pad):min(screen_bgr.shape[1], x + w_m + pad),
+                    ]
+                    like_score = self.match_template_score(sub_roi, sub_tpl_c)
+
+                    if like_score < like_threshold:
+                        continue
+
+                    # 综合计算总分
+                    final_score = (
+                        color_score * 0.30 +
+                        gray_score * 0.20 +
+                        edge_score * 0.20 +
+                        center_score * 0.15 +
+                        like_score * 0.15
+                    )
+
+                    curr_pos = (
+                        x + w_m // 2 + (region[0] if region else 0),
+                        y + h_m // 2 + (region[1] if region else 0),
+                    )
+
+                    # 只要及格，立刻返回（因为已经排过序了，第一个及格的一定是左上角的第一个目标）
+                    if final_score >= final_threshold:
+                        self.log(
+                            f"[MultiMatch] 锁定目标: {main_path}+{sub_path} | "
+                            f"综合: {final_score:.3f} | 彩色: {color_score:.3f} | "
+                            f"灰度: {gray_score:.3f} | 边缘: {edge_score:.3f} | "
+                            f"中心: {center_score:.3f} | 标签: {like_score:.3f}"
+                        )
+                        return curr_pos
+
+            return None
+
+        except Exception as e:
+            self.log(f"find_image_with_element_multi 异常: {e}")
+            return None
     
     def find_image_with_element_fast(self, main_path, sub_path, region=None, threshold=0.70, sub_threshold=0.70):
         if not self.is_running:
@@ -2822,7 +2946,7 @@ class FH_UltimateBot(ctk.CTk):
             "VEI.png",
             region=self.regions["下"],
             threshold=0.75,
-            timeout=100,
+            timeout=20,
             interval=1.0,
             fast_mode=True
         )
