@@ -3338,39 +3338,7 @@ class FH_UltimateBot(ctk.CTk):
                     continue 
                 # =========================================
                 now = time.time()
-                # ====== 【新增】第一优先级：检测爆显存 (每2秒检测一次) ======
-                if now - last_vram_chk >= 2.0:
-                    pos_vram = self.find_image_gray("vramen.png", region=self.regions["全界面"], threshold=0.75, fast_mode=True)
-                    if pos_vram:
-                        self.log("❌ 致命异常：检测到爆显存(vramen)警告！准备强杀进程进行冷却...")
-                        # 1. 马上松开所有按键
-                        self.hw_key_up("w")
-                        self.hw_key_up("up")
-                        driving_keys_held = False
-                        
-                        # 2. 强杀游戏进程 (使用通配符确保不管地平线几代都能杀掉)
-                        self.log("正在强行结束游戏进程...")
-                        os.system("taskkill /F /IM forzahorizon*.exe /T")
-                        
-                        # 3. 10分钟(600秒)冷却期，期间打碎循环确保脚本可被停止/暂停
-                        self.log("进入 10 分钟显存降温冷却期...")
-                        for m in range(10):
-                            self.log(f"⏳ 显存冷却中... 剩余 {10 - m} 分钟")
-                            for s in range(60):
-                                if not self.is_running: return False
-                                if hasattr(self, "check_pause"): self.check_pause()
-                                time.sleep(1)
-                                
-                        # 4. 冷却完毕，重新启动并重组赛事
-                        self.log("冷却完毕，尝试重新拉起游戏...")
-                        if hasattr(self, "restart_game_and_boot") and self.restart_game_and_boot():
-                            self.log("🔄 重启并进菜单成功！脱离了赛事，需要重新执行输入代码找图等前置流程...")
-                            # 递归调用逻辑：因为 race_counter 没变，直接重新跑一遍 logic_race 完美接续进度
-                            return self.logic_race(target_count)
-                        else:
-                            self.log("游戏重启失败或超时，结束任务。")
-                            return False
-                    last_vram_chk = now
+                
                 # 【新增逻辑】：120秒超时防卡死检测
                 if now - race_start_time > 120.0:
                     self.log("跑图超时(已超过120秒)！触发强制重开赛事逻辑...")
