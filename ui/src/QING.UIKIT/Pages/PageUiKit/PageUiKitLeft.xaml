@@ -1,0 +1,48 @@
+<local:MyPageLeft x:Class="PageUiKitLeft"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:QING.UIKIT"
+                  AnimatedControl="PanAnimated"
+                  Width="300">
+    <Grid x:Name="PanAnimated">
+        <StackPanel x:Name="PanSummary" Margin="18,20,18,12">
+            <Border CornerRadius="10"
+                    Background="{DynamicResource ColorBrushSemiTransparent}"
+                    Padding="18"
+                    Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock x:Name="LabSection"
+                               Text="FH6Auto"
+                               TextWrapping="Wrap"
+                               FontSize="21"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource ColorBrush3}" />
+                    <TextBlock x:Name="LabDescription"
+                               Text="基于 QING.UIKIT 的新前端，Python 自动化核心保持独立运行。"
+                               TextWrapping="Wrap"
+                               FontSize="12"
+                               Foreground="{DynamicResource ColorBrushGray3}"
+                               Margin="0,8,0,0" />
+                </StackPanel>
+            </Border>
+
+            <local:MyCard Title="状态" Margin="0,0,0,14">
+                <StackPanel Margin="16,42,16,16">
+                    <local:MyListItem Title="UI 框架" Info="QING.UIKIT / VB.NET / WPF" IsHitTestVisible="False" Height="54" />
+                    <local:MyListItem Title="自动化核心" Info="Python / OpenCV / SendInput" IsHitTestVisible="False" Height="54" />
+                    <local:MyListItem Title="桥接方式" Info="WPF 启动 headless Python 进程" IsHitTestVisible="False" Height="54" />
+                </StackPanel>
+            </local:MyCard>
+
+            <local:MyCard Title="页面" Margin="0">
+                <StackPanel Margin="12,42,12,12">
+                    <local:MyListItem x:Name="ItemOverview" Title="控制台" Type="RadioBox" Tag="0" Checked="True" Height="38" IsScaleAnimationEnabled="False" />
+                    <local:MyListItem x:Name="ItemControls" Title="流程" Type="RadioBox" Tag="1" Height="38" IsScaleAnimationEnabled="False" />
+                    <local:MyListItem x:Name="ItemLayout" Title="悬浮窗" Type="RadioBox" Tag="2" Height="38" IsScaleAnimationEnabled="False" />
+                    <local:MyListItem x:Name="ItemTheme" Title="设置" Type="RadioBox" Tag="3" Height="38" IsScaleAnimationEnabled="False" />
+                    <local:MyListItem x:Name="ItemAbout" Title="关于" Type="RadioBox" Tag="4" Height="38" IsScaleAnimationEnabled="False" />
+                </StackPanel>
+            </local:MyCard>
+        </StackPanel>
+    </Grid>
+</local:MyPageLeft>

@@ -1,6 +1,6 @@
-# FH6Auto
+# FH6Farm
 
-一个基于 **Python + 图像识别 + 输入自动化** 的 FH6 视觉脚本工具。  
+一个基于 **Python + 图像识别 + 输入自动化** 的 FH6 视觉脚本工具，并提供独立的 VB.NET/WPF 桌面前端。
 支持 **循环跑图 / 批量买车 / 超级抽奖 / 移除车辆 / 多模块串联 / 无限循环挂机**。
 
 > 仅供 Python 自动化技术交流与学习使用，请勿用于商业用途或破坏游戏平衡。  
@@ -8,9 +8,21 @@
 
 ---
 
+## 项目来源与开发说明
+
+- 原项目：[`YOUSTHEONE/FH6Auto`](https://github.com/YOUSTHEONE/FH6Auto)
+- 原作者：**YOUSTHEONE / YSTO**
+- FH6Farm UI 开发与前后端整合：**Dr.Hydra**
+- 新 UI 技术栈：**VB.NET + WPF + QING.UIKIT**
+- UI 的视觉布局与交互设计参考了 **PCL（Plain Craft Launcher）**
+
+本仓库保留原 Python 自动化核心，并由 Dr.Hydra 开发新的 WPF 前端、进程桥接、配置面板、日志面板、悬浮窗、发布打包与验证流程。PCL 仅作为 UI 设计参考，本项目与 PCL 官方不存在隶属或合作关系。
+
+---
+
 ## 项目简介
 
-FH6Auto 是一个围绕游戏界面自动识别与流程控制设计的桌面自动化工具。  
+FH6Farm 基于 FH6Auto 的自动化实现继续开发，是一个围绕游戏界面自动识别与流程控制设计的桌面自动化工具。
 项目以 **图像识别** 作为流程引导核心，尽量避免纯按键脚本“盲操作”带来的失控风险。
 
 工具通过以下方式实现自动执行：
@@ -282,7 +294,7 @@ FH6Auto 是一个围绕游戏界面自动识别与流程控制设计的桌面自
 
 ## 技术实现
 
-本项目主要基于以下 Python 技术栈：
+自动化核心主要基于以下 Python 技术栈：
 
 - **customtkinter**：现代化桌面 UI
 - **opencv-python**：模板匹配 / 图像识别
@@ -293,6 +305,32 @@ FH6Auto 是一个围绕游戏界面自动识别与流程控制设计的桌面自
 - **threading**：后台任务执行
 - **PIL**：资源图像加载
 - **requests**：版本更新检查
+
+新的桌面前端使用：
+
+- **VB.NET / WPF**：主窗口、配置界面与悬浮窗
+- **QING.UIKIT**：控件、主题与窗口框架
+- **System.Text.Json**：与 Python 核心共享配置
+- **Process bridge**：启动并管理 headless Python 核心
+- **PCL（Plain Craft Launcher）**：UI 视觉布局与交互设计参考
+
+开发运行：
+
+```powershell
+dotnet run --project .\ui\src\QING.UIKIT\QING.UIKIT.vbproj
+```
+
+完整验证：
+
+```powershell
+.\scripts\verify.ps1
+```
+
+构建发布包：
+
+```powershell
+.\scripts\build-release.ps1
+```
 
 ---
 

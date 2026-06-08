@@ -1,5 +1,10 @@
 import sys
 import os
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 # ====== 【修复 OMP 冲突的核心代码】 ======
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # =======================================
@@ -9,6 +14,7 @@ import shutil
 import ctypes
 import subprocess
 import webbrowser
+import argparse
 # ====== 【新增】：启动前置环境检测 (防闪退机制) ======
 def check_windows_dependencies():
     if sys.platform != "win32":
@@ -1300,6 +1306,10 @@ class FH_UltimateBot(ctk.CTk):
     def log(self, message):
         curr_time = time.strftime("%H:%M:%S")
         full_msg = f"[{curr_time}] {message}"
+        try:
+            print(full_msg, flush=True)
+        except Exception:
+            pass
 
         def write_ui():
             try:
@@ -1527,6 +1537,11 @@ class FH_UltimateBot(ctk.CTk):
 
         self.ui_call(restore_ui)
         self.log("!!! 任务已停止，所有物理按键状态已强制重置")
+        if getattr(self, "headless_mode", False):
+            try:
+                self.after(500, self.destroy)
+            except Exception:
+                pass
     def start_test_boot(self):
         """独立运行的测试开机流程"""
         if self.is_running:
@@ -4443,5 +4458,14 @@ class FH_UltimateBot(ctk.CTk):
 
     
 if __name__ == "__main__":
-    app = FH_UltimateBot()
-    app.mainloop()
+    parser = argparse.ArgumentParser(description="FH6Auto")
+    parser.add_argument("--headless", action="store_true", help="run through the headless core adapter")
+    parser.add_argument("--start", choices=["race", "buy", "cj", "sell"], help="pipeline step to start in headless mode")
+    args = parser.parse_args()
+
+    if args.headless:
+        from fh6auto_core.headless import run_headless
+        run_headless(FH_UltimateBot, args.start)
+    else:
+        app = FH_UltimateBot()
+        app.mainloop()
