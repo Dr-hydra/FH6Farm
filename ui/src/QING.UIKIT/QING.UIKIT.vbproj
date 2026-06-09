@@ -7,7 +7,10 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>QING.UIKIT</RootNamespace>
-    <AssemblyName>FH6Auto.UI</AssemblyName>
+    <AssemblyName>FH6Farm</AssemblyName>
+    <Version>1.1.6.4</Version>
+    <FileVersion>1.1.6.4</FileVersion>
+    <AssemblyVersion>1.1.6.4</AssemblyVersion>
     <MyType>Custom</MyType>
     <StartupObject>QING.UIKIT.Application</StartupObject>
     <ApplicationIcon>Images\icon.ico</ApplicationIcon>

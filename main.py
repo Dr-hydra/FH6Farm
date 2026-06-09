@@ -95,7 +95,7 @@ LOG_FILE = os.path.join(APP_DIR, "bot_log.txt")
 CACHE_DIR = os.path.join(APP_DIR, "cache")
 TEMPLATE_CACHE_FILE = os.path.join(CACHE_DIR, "template_cache.pkl")
 TEMPLATE_META_FILE = os.path.join(CACHE_DIR, "template_meta.json")
-CURRENT_VERSION = "1.1.6.3"
+CURRENT_VERSION = "1.1.6.4"
 def auto_extract_configs():
     os.makedirs(CONFIG_DIR, exist_ok=True)
     
@@ -472,7 +472,7 @@ class FH_UltimateBot(ctk.CTk):
             "next_4": 1,
             "global_loops": 10, 
             "skill_dirs": ["right", "up", "up", "up", "left"],
-            "share_code": "890169683", 
+            "share_code": "890169683",
             "auto_restart": False,
             "restart_cmd": "start steam://run/2483190", 
             "sell_mode": 1 
@@ -1086,7 +1086,7 @@ class FH_UltimateBot(ctk.CTk):
         def check_update_logic():
             self.ui_call(self.lbl_version.configure, text="正在连接 Github...", text_color="#3498DB")
             try:
-                url = "https://raw.githubusercontent.com/YOUSTHEONE/FH6Auto/refs/heads/main/version.json"
+                url = "https://raw.githubusercontent.com/Dr-hydra/FH6Farm/refs/heads/main/version.json"
                 resp = requests.get(url, timeout=5)
                 if resp.status_code == 200:
                     data = resp.json()

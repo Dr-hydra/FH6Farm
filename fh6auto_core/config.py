@@ -26,6 +26,9 @@ DEFAULT_CONFIG = {
     "calc_a": "",
     "calc_b": "81700",
     "calc_c": "30",
+    "start_hotkey": "F7",
+    "stop_hotkey": "F8",
+    "hotkey_start_task": "race",
 }
 
 
@@ -66,6 +69,11 @@ def normalize_config(raw):
     config["calc_a"] = _digits(config.get("calc_a"), "")
     config["calc_b"] = _digits(config.get("calc_b"), DEFAULT_CONFIG["calc_b"])
     config["calc_c"] = _digits(config.get("calc_c"), DEFAULT_CONFIG["calc_c"])
+    config["start_hotkey"] = str(config.get("start_hotkey") or DEFAULT_CONFIG["start_hotkey"]).strip().upper()
+    config["stop_hotkey"] = str(config.get("stop_hotkey") or DEFAULT_CONFIG["stop_hotkey"]).strip().upper()
+    config["hotkey_start_task"] = str(config.get("hotkey_start_task") or DEFAULT_CONFIG["hotkey_start_task"]).strip().lower()
+    if config["hotkey_start_task"] not in {"race", "buy", "cj", "sell"}:
+        config["hotkey_start_task"] = DEFAULT_CONFIG["hotkey_start_task"]
 
     skill_dirs = config.get("skill_dirs")
     if not isinstance(skill_dirs, list):
@@ -73,7 +81,7 @@ def normalize_config(raw):
     config["skill_dirs"] = [
         item for item in (str(x).strip().lower() for x in skill_dirs)
         if item in {"up", "down", "left", "right"}
-    ] or list(DEFAULT_CONFIG["skill_dirs"])
+    ]
 
     return config
 

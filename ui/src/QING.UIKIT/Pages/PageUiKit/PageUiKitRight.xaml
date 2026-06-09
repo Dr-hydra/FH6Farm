@@ -7,40 +7,6 @@
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
         <StackPanel x:Name="PanMain" Margin="28,24,28,14" Grid.IsSharedSizeScope="True">
-            <local:MyCard Title="FH6Auto" Margin="0,0,0,15">
-                <Grid Margin="20,40,20,18">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock x:Name="LabTitle"
-                                   Text="控制台"
-                                   FontSize="24"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ColorBrush3}" />
-                        <TextBlock x:Name="LabSubtitle"
-                                   Text="QING.UIKIT 前端控制面板，Python 自动化核心独立运行。"
-                                   TextWrapping="Wrap"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource ColorBrushGray3}"
-                                   Margin="0,8,20,0" />
-                        <TextBlock x:Name="LabStatus"
-                                   Text="核心状态：空闲"
-                                   TextWrapping="Wrap"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource ColorBrush2}"
-                                   Margin="0,10,20,0" />
-                    </StackPanel>
-                    <local:MyLoading Grid.Column="1"
-                                     x:Name="LoadState"
-                                     Height="42"
-                                     Width="42"
-                                     AutoRun="False"
-                                     VerticalAlignment="Center" />
-                </Grid>
-            </local:MyCard>
-
             <local:MyCard x:Name="CardDashboard" Title="控制台" Margin="0,0,0,15">
                 <StackPanel Margin="20,38,20,18">
                     <WrapPanel Margin="0,0,0,12">
@@ -48,16 +14,8 @@
                         <local:MyButton x:Name="BtnStartBuy" Text="启动买车" Padding="18,8" Margin="0,0,12,12" Click="BtnStartBuy_Click" />
                         <local:MyButton x:Name="BtnStartCj" Text="启动抽奖" Padding="18,8" Margin="0,0,12,12" Click="BtnStartCj_Click" />
                         <local:MyButton x:Name="BtnStartSell" Text="启动移除" Padding="18,8" Margin="0,0,12,12" Click="BtnStartSell_Click" />
-                        <local:MyButton x:Name="BtnStop" Text="停止核心" Padding="18,8" ColorType="Red" Margin="0,0,12,12" Click="BtnStop_Click" />
+                        <local:MyButton x:Name="BtnStop" Text="停止任务" Padding="18,8" ColorType="Red" Margin="0,0,12,12" Click="BtnStop_Click" />
                     </WrapPanel>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="100" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="蓝图代码" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" />
-                        <local:MyTextBox x:Name="TxtShareCode" Grid.Column="1" Height="34" HintText="例如 890169683" />
-                    </Grid>
                     <TextBox x:Name="TxtLog"
                              Height="300"
                              IsReadOnly="True"
@@ -73,6 +31,26 @@
 
             <local:MyCard x:Name="CardFlow" Title="流程" Margin="0,0,0,15">
                 <StackPanel Margin="20,38,20,18">
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="蓝图代码" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" />
+                        <local:MyTextBox x:Name="TxtShareCode" Grid.Column="1" Height="34" HintText="例如 890169683" />
+                        <TextBlock Grid.Column="2" Text="大循环次数" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" Margin="20,0,0,0" />
+                        <local:MyTextBox x:Name="TxtGlobalLoops" Grid.Column="3" Height="34" />
+                        <local:MyButton x:Name="BtnSaveFlowConfig"
+                                        Grid.Column="4"
+                                        Text="保存配置"
+                                        Padding="18,8"
+                                        ColorType="Highlight"
+                                        Margin="14,0,0,0"
+                                        Click="BtnSaveFlowConfig_Click" />
+                    </Grid>
                     <UniformGrid Columns="4" Margin="0,0,0,14">
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="跑图次数" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,6" />
@@ -109,24 +87,76 @@
                             <local:MyTextBox x:Name="TxtNext4" Height="32" HintText="下一步 1-4" />
                         </StackPanel>
                     </UniformGrid>
-                    <Grid>
+                    <Grid Margin="0,2,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="140" />
-                            <ColumnDefinition Width="120" />
-                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="大循环次数" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" />
-                        <local:MyTextBox x:Name="TxtGlobalLoops" Grid.Column="1" Height="34" />
-                        <TextBlock Grid.Column="2" Text="技能路径" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" Margin="20,0,0,0" />
-                        <local:MyTextBox x:Name="TxtSkillDirs" Grid.Column="3" Height="34" HintText="right,up,up,up,left" />
+                        <Border Width="264"
+                                Height="264"
+                                Padding="8"
+                                CornerRadius="8"
+                                Background="{DynamicResource ColorBrushSemiTransparent}"
+                                BorderBrush="{DynamicResource ColorBrushBg0}"
+                                BorderThickness="1">
+                            <UniformGrid x:Name="SkillPathGrid" Rows="4" Columns="4" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="22,4,0,0">
+                            <TextBlock Text="技能路径"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ColorBrush2}"
+                                       Margin="0,0,0,8" />
+                            <TextBlock Text="固定从左下角开始。每次只能点亮当前终点上下左右相邻且未使用的格子，可在任意格结束。"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource ColorBrushGray3}"
+                                       Margin="0,0,0,12" />
+                            <TextBlock x:Name="LabSkillPath"
+                                       Text="已选择 1 格"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource ColorBrush2}"
+                                       Margin="0,0,0,14" />
+                            <local:MyButton x:Name="BtnResetSkillPath"
+                                            Text="重置路径"
+                                            Padding="18,8"
+                                            HorizontalAlignment="Left"
+                                            Click="BtnResetSkillPath_Click" />
+                        </StackPanel>
                     </Grid>
+                </StackPanel>
+            </local:MyCard>
+
+            <local:MyCard x:Name="CardFlowGuide" Title="使用说明" Margin="0,0,0,15">
+                <StackPanel Margin="20,38,20,18">
+                    <TextBlock Text="通用准备" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,8" />
+                    <TextBlock Text="游戏语言使用简体中文，键盘切换为英文输入；建议关闭 HDR、滤镜等会改变画面颜色的功能，并使用自动转向、自动挡。执行期间不要切换窗口或操作键鼠。"
+                               TextWrapping="Wrap" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,16" />
+
+                    <TextBlock Text="跑图" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,8" />
+                    <TextBlock Text="提前购买斯巴鲁 Impreza 22B-STi Version，调校至 S2 900、保持默认涂装并加入收藏。填写可用的蓝图分享代码后，任务会自动进入创意中心 / EventLab、搜索蓝图、选择带收藏标记的跑图车辆并循环赛事。若找不到蓝图、车辆品牌、收藏标记或赛事起点，任务会停止；单场超过 120 秒会尝试重开且本场不计数。"
+                               TextWrapping="Wrap" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,16" />
+
+                    <TextBlock Text="买车" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,8" />
+                    <TextBlock Text="任务会进入收集簿与车辆收集，识别目标品牌和消耗品车辆后连续购买。请确认车辆可正常购买、资金充足，并确保 images 中的 CCbrand.png 与 consumablecar.png 能匹配当前游戏画面。购买次数通常应与后续抽奖、移除次数协调；识别不到品牌或车辆时任务会停止。"
+                               TextWrapping="Wrap" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,16" />
+
+                    <TextBlock Text="抽奖" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,8" />
+                    <TextBlock Text="任务会在“我的车辆”中寻找带 NEW 标记的消耗品车辆，切换并进入车辆熟练度，然后按照上方 4×4 技能路径依次点亮技能。路径固定从左下角开始，只能经过相邻且未使用的格子。请确保车辆拥有足够技能点；识别到技能已点过会跳过，技能点耗尽或技能点完会提前结束。"
+                               TextWrapping="Wrap" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,16" />
+
+                    <TextBlock Text="移除" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,8" />
+                    <TextBlock Text="模式 1 会筛选目标品牌并通过模板识别目标车辆，排除带 NEW 标记的车辆后再移除；模式 2 会按“最近获得”排序，从列表首项连续移除。模式 2 风险更高，使用前必须人工确认排序、目标车辆和移除菜单均正确，避免误删收藏车辆。"
+                               TextWrapping="Wrap" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,16" />
+
+                    <TextBlock Text="流程串联" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,8" />
+                    <TextBlock Text="勾选“执行后继续”并填写下一步编号：1 跑图、2 买车、3 抽奖、4 移除。设置完成后返回控制台，从任意模块启动；需要立即中止时点击“停止任务”或使用停止快捷键。"
+                               TextWrapping="Wrap" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
 
             <local:MyCard x:Name="CardOverlay" Title="悬浮窗" Margin="0,0,0,15">
                 <StackPanel Margin="20,38,20,18">
-                    <TextBlock Text="运行任务时可以打开置顶小窗。普通无边框窗口模式下可显示在游戏前方；独占全屏可能无法覆盖。"
+                    <TextBlock Text="悬浮窗会在软件启动时默认显示。普通无边框窗口模式下可显示在游戏前方；独占全屏可能无法覆盖。"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource ColorBrush2}"
                                Margin="0,0,0,14" />
@@ -175,6 +205,31 @@
                             <ComboBoxItem Content="模式2: 移除最近添加" />
                         </local:MyComboBox>
                     </Grid>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="开始快捷键" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" />
+                        <local:MyTextBox x:Name="TxtStartHotkey" Grid.Column="1" Height="34" HintText="例如 F7 或 Ctrl+Alt+F7" />
+                        <TextBlock Grid.Column="2" Text="停止快捷键" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" Margin="18,0,0,0" />
+                        <local:MyTextBox x:Name="TxtStopHotkey" Grid.Column="3" Height="34" HintText="例如 F8" />
+                    </Grid>
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="快捷键开始任务" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" />
+                        <local:MyComboBox x:Name="CmbHotkeyStartTask" Grid.Column="1" Height="34">
+                            <ComboBoxItem Content="跑图" Tag="race" />
+                            <ComboBoxItem Content="买车" Tag="buy" />
+                            <ComboBoxItem Content="抽奖" Tag="cj" />
+                            <ComboBoxItem Content="移除" Tag="sell" />
+                        </local:MyComboBox>
+                    </Grid>
                     <WrapPanel>
                         <local:MyButton x:Name="BtnSaveConfig" Text="保存配置" Padding="18,8" ColorType="Highlight" Margin="0,0,12,12" Click="BtnSaveConfig_Click" />
                         <local:MyButton x:Name="BtnReloadConfig" Text="重新加载" Padding="18,8" Margin="0,0,12,12" Click="BtnReloadConfig_Click" />
@@ -191,7 +246,18 @@
                                FontSize="13"
                                Foreground="{DynamicResource ColorBrush2}"
                                Margin="0,0,0,12" />
-                    <local:MyListItem Title="原项目来源" Info="GitHub: YOUSTHEONE/FH6Auto" IsHitTestVisible="False" Height="54" />
+                    <local:MyListItem x:Name="BtnOriginalProject"
+                                      Title="原项目地址"
+                                      Info="https://github.com/YOUSTHEONE/FH6Auto"
+                                      Type="Clickable"
+                                      Height="54"
+                                      Click="BtnOriginalProject_Click" />
+                    <local:MyListItem x:Name="BtnCurrentProject"
+                                      Title="当前项目地址"
+                                      Info="https://github.com/Dr-hydra/FH6Farm"
+                                      Type="Clickable"
+                                      Height="54"
+                                      Click="BtnCurrentProject_Click" />
                     <local:MyListItem Title="原作者" Info="YOUSTHEONE / YSTO" IsHitTestVisible="False" Height="54" />
                     <local:MyListItem Title="UI 开发" Info="Dr.Hydra：QING.UIKIT、VB.NET/WPF 前端与 Python core bridge" IsHitTestVisible="False" Height="54" />
                     <local:MyListItem Title="UI 设计参考" Info="PCL（Plain Craft Launcher），本项目与 PCL 官方无隶属关系" IsHitTestVisible="False" Height="54" />
