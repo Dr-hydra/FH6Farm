@@ -47,18 +47,23 @@ Include release packaging:
 Output:
 
 ```text
-dist\FH6Auto.UI\
+dist\release\
 ```
 
-The package contains the WPF frontend, Python headless entry, `main.py`, `images`, `assets`, and config files. Use `run-ui.bat` inside the package to start the frontend.
+The build creates two minimal packages:
 
-The release package is published for `win-x64` as a self-contained WPF app. The Python automation core is bundled as `FH6AutoCore.exe`, so normal release usage does not require a local Python install.
+- `with-runtime`: self-contained WPF frontend; no .NET installation required.
+- `without-runtime`: requires the .NET 10 Desktop Runtime for Windows x64.
 
-Run the package self-check:
+Each package contains only:
 
-```powershell
-.\dist\FH6Auto.UI\self-check.ps1
+```text
+FH6Farm.exe
+FH6AutoCore.exe
+config.json
 ```
+
+The Python automation core is bundled in both variants, so neither package requires a local Python installation.
 
 ## Attribution
 

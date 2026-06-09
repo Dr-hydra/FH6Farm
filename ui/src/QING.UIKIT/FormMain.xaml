@@ -102,13 +102,12 @@
                         </Grid.ColumnDefinitions>
                         <Path x:Name="ShapeTitleLogo" Data="M26,29 v-25 h6 a7,7 180 0 1 0,14 h-6 M62.5,6.5 a10,11.5 180 1 0 0,18 M71,2.5 v24.5 h13.5" SnapsToDevicePixels="False" UseLayoutRounding="False" IsHitTestVisible="False" HorizontalAlignment="Left" Margin="19,15.5,0,15.5" Stretch="Fill" Stroke="White" StrokeThickness="2.2" Width="39" />
                         <TextBlock x:Name="LabTitleLogo" Text="FH6Auto" Visibility="Collapsed" SnapsToDevicePixels="False" UseLayoutRounding="False" IsHitTestVisible="False" HorizontalAlignment="Left" Margin="18,0,0,0" Foreground="White" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <TextBlock x:Name="LabTitleStatus" Text="QING.UIKIT Frontend" Visibility="Collapsed" SnapsToDevicePixels="False" UseLayoutRounding="False" IsHitTestVisible="False" HorizontalAlignment="Left" Margin="122,1,0,0" Foreground="White" FontSize="12" Opacity="0.72" VerticalAlignment="Center" />
                         <local:MyImage x:Name="ImageTitleLogo" SnapsToDevicePixels="False" UseLayoutRounding="False" IsHitTestVisible="False" HorizontalAlignment="Left" Margin="7" VerticalAlignment="Center" Visibility="Collapsed" />
                         <StackPanel Grid.Column="1" x:Name="PanTitleSelect" HorizontalAlignment="Left" Orientation="Horizontal" Height="27" VerticalAlignment="Center" Margin="13,0">
                             <local:MyRadioButton x:Name="BtnTitleSelect0" Text="控制台" Tag="0" Margin="5,0" Checked="True" Padding="2,0" LogoScale="0.9" Logo="M128 192h768v128H128zM128 448h768v128H128zM128 704h768v128H128z" />
                             <local:MyRadioButton x:Name="BtnTitleSelect1" Text="流程" Tag="1" Margin="5,0" Padding="2,0" LogoScale="0.9" Logo="M128 256h320v320H128zM576 256h320v128H576zM576 512h320v128H576zM128 704h768v96H128z" />
                             <local:MyRadioButton x:Name="BtnTitleSelect2" Text="悬浮窗" Tag="2" Margin="5,0" Padding="2,0" LogoScale="0.9" Logo="M128 160h768v192H128zM128 448h288v416H128zM512 448h384v416H512z" />
-                            <local:MyRadioButton x:Name="BtnTitleSelect3" Text="设置" Tag="3" Margin="5,0" Padding="2,0" LogoScale="0.9" Logo="M512 128a384 384 0 1 0 0 768c64 0 96-32 96-72 0-28-16-48-32-64-20-20-24-48 8-72h56c132 0 224-84 224-204 0-192-164-356-352-356zM272 480a56 56 0 1 1 0-112 56 56 0 0 1 0 112zM424 320a56 56 0 1 1 0-112 56 56 0 0 1 0 112zM624 320a56 56 0 1 1 0-112 56 56 0 0 1 0 112zM760 480a56 56 0 1 1 0-112 56 56 0 0 1 0 112z" />
+                            <local:MyRadioButton x:Name="BtnTitleSelect3" Text="设置" Tag="3" Margin="5,0" Padding="2,0" LogoScale="0.9" Logo="M19.43,12.98 C19.47,12.66 19.5,12.34 19.5,12 C19.5,11.66 19.47,11.34 19.42,11.02 L21.54,9.37 L19.54,5.91 L17.05,6.91 C16.54,6.5 15.98,6.17 15.36,5.92 L15,3.27 L11,3.27 L10.64,5.92 C10.03,6.17 9.46,6.51 8.95,6.91 L6.46,5.91 L4.46,9.37 L6.58,11.02 C6.53,11.34 6.5,11.67 6.5,12 C6.5,12.33 6.53,12.66 6.58,12.98 L4.46,14.63 L6.46,18.09 L8.95,17.09 C9.46,17.5 10.02,17.83 10.64,18.08 L11,20.73 L15,20.73 L15.36,18.08 C15.97,17.83 16.54,17.49 17.05,17.09 L19.54,18.09 L21.54,14.63 Z M13,15.5 A3.5,3.5 0 1 1 13,8.5 A3.5,3.5 0 0 1 13,15.5 Z" />
                             <local:MyRadioButton x:Name="BtnTitleSelect4" Text="关于" Tag="4" Margin="5,0" Padding="2,0" LogoScale="0.9" Logo="M448 128h128v128H448zM448 384h128v512H448z" />
                         </StackPanel>
                     </Grid>
@@ -119,32 +118,9 @@
                     </Grid>
                 </Grid>
 
-                <Grid x:Name="PanLeft" Grid.Row="1" HorizontalAlignment="Left" SnapsToDevicePixels="True">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="1*" />
-                    </Grid.ColumnDefinitions>
-                    <Rectangle x:Name="RectLeftBackground" Width="0" Fill="{DynamicResource ColorBrushBackgroundTransparentSidebar}" IsHitTestVisible="False" />
-                    <Rectangle x:Name="RectLeftShadow" Width="4" HorizontalAlignment="Left" Grid.Column="1" IsHitTestVisible="False">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0" Opacity="0.04">
-                                <GradientStop Color="#000000" Offset="0" />
-                                <GradientStop Color="#00000000" Offset="1" />
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
-                </Grid>
-
                 <Grid x:Name="PanMain" Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Top">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="1*" />
-                    </Grid.ColumnDefinitions>
-                    <Border Grid.Column="1" Grid.IsSharedSizeScope="True" UseLayoutRounding="True" SnapsToDevicePixels="True">
-                        <Border x:Name="PanMainRight" RenderOptions.BitmapScalingMode="NearestNeighbor" UseLayoutRounding="False" SnapsToDevicePixels="False" />
-                    </Border>
                     <Border Grid.IsSharedSizeScope="True" UseLayoutRounding="True" SnapsToDevicePixels="True">
-                        <Border x:Name="PanMainLeft" RenderOptions.BitmapScalingMode="NearestNeighbor" UseLayoutRounding="False" SnapsToDevicePixels="False" />
+                        <Border x:Name="PanMainRight" RenderOptions.BitmapScalingMode="NearestNeighbor" UseLayoutRounding="False" SnapsToDevicePixels="False" />
                     </Border>
                 </Grid>
 

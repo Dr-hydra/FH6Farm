@@ -1,8 +1,15 @@
+param(
+    [string]$Version
+)
+
 $ErrorActionPreference = "Stop"
-$root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$outDir = Join-Path $root "dist\FH6Auto.UI"
-$assetsData = "$root\assets;assets"
-$imagesData = "$root\images;images"
+$root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Set-Location $root
+
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $Version = (Get-Content -LiteralPath (Join-Path $root "version.json") -Raw | ConvertFrom-Json).version
+}
+
 $Python = "python"
 if (-not (Get-Command $Python -ErrorAction SilentlyContinue)) {
     $Python = "py"
@@ -11,94 +18,111 @@ if (-not (Get-Command $Python -ErrorAction SilentlyContinue)) {
     throw "Python was not found. Install Python or make py.exe/python.exe available."
 }
 
-Set-Location $root
+$buildRoot = Join-Path $root "build\release"
+$releaseRoot = Join-Path $root "dist\release"
+$coreOutput = Join-Path $buildRoot "core"
+$pyWork = Join-Path $buildRoot "pyinstaller"
+$uiWithRuntime = Join-Path $buildRoot "ui-with-runtime"
+$uiWithoutRuntime = Join-Path $buildRoot "ui-without-runtime"
+$withRuntimeName = "FH6Farm-v$Version-win-x64-with-runtime"
+$withoutRuntimeName = "FH6Farm-v$Version-win-x64-without-runtime"
+$withRuntimeDir = Join-Path $releaseRoot $withRuntimeName
+$withoutRuntimeDir = Join-Path $releaseRoot $withoutRuntimeName
 
-if (Test-Path $outDir) {
-    Remove-Item -LiteralPath $outDir -Recurse -Force
-}
-New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-$pyBuildDir = Join-Path $root "build\pyinstaller-core"
-if (Test-Path $pyBuildDir) {
-    Remove-Item -LiteralPath $pyBuildDir -Recurse -Force
-}
-
-Write-Host "[1/4] Publish WPF frontend"
-dotnet publish ".\ui\src\QING.UIKIT\QING.UIKIT.vbproj" `
-    -c Release `
-    -r win-x64 `
-    -o $outDir `
-    --self-contained true `
-    -p:PublishSingleFile=false `
-    -p:PublishReadyToRun=false
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet publish failed with exit code $LASTEXITCODE"
+function Remove-WorkspaceDirectory([string]$Path) {
+    $fullPath = [IO.Path]::GetFullPath($Path)
+    $rootPrefix = [IO.Path]::GetFullPath($root).TrimEnd('\') + '\'
+    if (-not $fullPath.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove a directory outside the workspace: $fullPath"
+    }
+    if (Test-Path -LiteralPath $fullPath) {
+        Remove-Item -LiteralPath $fullPath -Recurse -Force
+    }
 }
 
-Write-Host "[2/4] Build Python core executable"
+Remove-WorkspaceDirectory $buildRoot
+Remove-WorkspaceDirectory $releaseRoot
+New-Item -ItemType Directory -Force -Path $coreOutput, $pyWork, $uiWithRuntime, $uiWithoutRuntime, $releaseRoot | Out-Null
+
+Write-Host "[1/5] Build Python automation core"
 & $Python -m PyInstaller `
     --noconfirm `
+    --clean `
     --onefile `
     --name FH6AutoCore `
-    --distpath $outDir `
-    --workpath $pyBuildDir `
-    --specpath $pyBuildDir `
+    --distpath $coreOutput `
+    --workpath $pyWork `
+    --specpath $pyWork `
     --icon "$root\assets\icon.ico" `
     --collect-data customtkinter `
-    --add-data $assetsData `
-    --add-data $imagesData `
+    --add-data "$root\assets;assets" `
+    --add-data "$root\images;images" `
     ".\fh6auto_core_launcher.py"
 if ($LASTEXITCODE -ne 0) {
     throw "PyInstaller failed with exit code $LASTEXITCODE"
 }
 
-Write-Host "[3/4] Copy Python source fallback and runtime assets"
-Copy-Item -LiteralPath ".\main.py" -Destination $outDir -Force
-Copy-Item -LiteralPath ".\fh6auto_core_launcher.py" -Destination $outDir -Force
-Copy-Item -LiteralPath ".\requirements.txt" -Destination $outDir -Force
-Copy-Item -LiteralPath ".\version.json" -Destination $outDir -Force
-Copy-Item -LiteralPath ".\config.json" -Destination $outDir -Force
-Copy-Item -LiteralPath ".\fh6auto_core" -Destination $outDir -Recurse -Force
-Copy-Item -LiteralPath ".\assets" -Destination $outDir -Recurse -Force
-Copy-Item -LiteralPath ".\images" -Destination $outDir -Recurse -Force
-
-Write-Host "[4/4] Write launch helper"
-@'
-@echo off
-cd /d "%~dp0"
-FH6Auto.UI.exe
-'@ | Set-Content -Path (Join-Path $outDir "run-ui.bat") -Encoding ASCII
-
-@'
-$ErrorActionPreference = "Stop"
-$root = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $root
-
-$requiredFiles = @(
-    "FH6Auto.UI.exe",
-    "FH6AutoCore.exe",
-    "config.json",
-    "version.json",
-    "run-ui.bat"
-)
-
-foreach ($file in $requiredFiles) {
-    if (-not (Test-Path (Join-Path $root $file))) {
-        throw "Missing required file: $file"
-    }
-}
-
-foreach ($dir in @("assets", "images")) {
-    if (-not (Test-Path (Join-Path $root $dir))) {
-        throw "Missing required directory: $dir"
-    }
-}
-
-& ".\FH6AutoCore.exe" --help | Out-Null
+Write-Host "[2/5] Publish self-contained WPF frontend"
+dotnet publish ".\ui\src\QING.UIKIT\QING.UIKIT.vbproj" `
+    -c Release `
+    -r win-x64 `
+    -o $uiWithRuntime `
+    --self-contained true `
+    -p:PublishSingleFile=true `
+    -p:IncludeNativeLibrariesForSelfExtract=true `
+    -p:EnableCompressionInSingleFile=true `
+    -p:PublishReadyToRun=false `
+    -p:DebugSymbols=false `
+    -p:DebugType=None
 if ($LASTEXITCODE -ne 0) {
-    throw "FH6AutoCore.exe --help failed with exit code $LASTEXITCODE"
+    throw "Self-contained dotnet publish failed with exit code $LASTEXITCODE"
 }
 
-Write-Host "FH6Auto.UI package self-check passed."
-'@ | Set-Content -Path (Join-Path $outDir "self-check.ps1") -Encoding UTF8
+Write-Host "[3/5] Publish framework-dependent WPF frontend"
+dotnet publish ".\ui\src\QING.UIKIT\QING.UIKIT.vbproj" `
+    -c Release `
+    -r win-x64 `
+    -o $uiWithoutRuntime `
+    --self-contained false `
+    -p:PublishSingleFile=true `
+    -p:PublishReadyToRun=false `
+    -p:DebugSymbols=false `
+    -p:DebugType=None
+if ($LASTEXITCODE -ne 0) {
+    throw "Framework-dependent dotnet publish failed with exit code $LASTEXITCODE"
+}
 
-Write-Host "Release package ready: $outDir"
+Write-Host "[4/5] Assemble minimal packages"
+foreach ($packageDir in @($withRuntimeDir, $withoutRuntimeDir)) {
+    New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+    Copy-Item -LiteralPath (Join-Path $coreOutput "FH6AutoCore.exe") -Destination $packageDir -Force
+    Copy-Item -LiteralPath ".\assets\config\config_example.json" -Destination (Join-Path $packageDir "config.json") -Force
+}
+Copy-Item -LiteralPath (Join-Path $uiWithRuntime "FH6Farm.exe") -Destination $withRuntimeDir -Force
+Copy-Item -LiteralPath (Join-Path $uiWithoutRuntime "FH6Farm.exe") -Destination $withoutRuntimeDir -Force
+
+foreach ($packageDir in @($withRuntimeDir, $withoutRuntimeDir)) {
+    $files = Get-ChildItem -LiteralPath $packageDir -File
+    if ($files.Count -ne 3) {
+        throw "Package should contain exactly 3 files, found $($files.Count): $packageDir"
+    }
+    & (Join-Path $packageDir "FH6AutoCore.exe") --help | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Bundled core probe failed: $packageDir"
+    }
+}
+
+Write-Host "[5/5] Create release archives and checksums"
+$withRuntimeZip = Join-Path $releaseRoot "$withRuntimeName.zip"
+$withoutRuntimeZip = Join-Path $releaseRoot "$withoutRuntimeName.zip"
+Compress-Archive -Path (Join-Path $withRuntimeDir "*") -DestinationPath $withRuntimeZip -CompressionLevel Optimal
+Compress-Archive -Path (Join-Path $withoutRuntimeDir "*") -DestinationPath $withoutRuntimeZip -CompressionLevel Optimal
+
+$hashLines = foreach ($archive in @($withRuntimeZip, $withoutRuntimeZip)) {
+    $hash = Get-FileHash -LiteralPath $archive -Algorithm SHA256
+    "$($hash.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($archive))"
+}
+$hashLines | Set-Content -LiteralPath (Join-Path $releaseRoot "SHA256SUMS.txt") -Encoding ASCII
+
+Write-Host "Release packages ready: $releaseRoot"
+Get-ChildItem -LiteralPath $releaseRoot -File | Select-Object Name, Length

@@ -27,5 +27,8 @@
     "ocr_lang": "简体中文",
     "calc_a": "10268096",
     "calc_b": "81700",
-    "calc_c": "30"
+    "calc_c": "30",
+    "start_hotkey": "F7",
+    "stop_hotkey": "F8",
+    "hotkey_start_task": "race"
 }

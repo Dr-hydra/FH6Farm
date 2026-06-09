@@ -71,11 +71,24 @@ Public Class FH6AutoConfig
 
     <JsonPropertyName("calc_c")>
     Public Property CalcC As String = "30"
+
+    <JsonPropertyName("start_hotkey")>
+    Public Property StartHotkey As String = "F7"
+
+    <JsonPropertyName("stop_hotkey")>
+    Public Property StopHotkey As String = "F8"
+
+    <JsonPropertyName("hotkey_start_task")>
+    Public Property HotkeyStartTask As String = "race"
 End Class
 
 Public Class FH6CoreBridge
     Public Event LogReceived(line As String)
     Public Event StateChanged(isRunning As Boolean)
+
+    Public Sub PublishLog(line As String)
+        RaiseEvent LogReceived(line)
+    End Sub
 
     Private _process As Process
     Private ReadOnly _jsonOptions As New JsonSerializerOptions With {
@@ -85,6 +98,12 @@ Public Class FH6CoreBridge
 
     Public ReadOnly Property ProjectRoot As String
         Get
+            Dim baseDir = Path.GetFullPath(AppContext.BaseDirectory)
+            If File.Exists(Path.Combine(baseDir, "FH6AutoCore.exe")) OrElse
+               File.Exists(Path.Combine(baseDir, "config.json")) Then
+                Return baseDir
+            End If
+
             Dim dir = New DirectoryInfo(AppContext.BaseDirectory)
             Do While dir IsNot Nothing
                 If File.Exists(Path.Combine(dir.FullName, "main.py")) Then Return dir.FullName
@@ -149,9 +168,9 @@ Public Class FH6CoreBridge
         RaiseEvent LogReceived("配置已保存：" & ConfigPath)
     End Sub
 
-    Public Sub StartPipeline(stepName As String, config As FH6AutoConfig)
+    Public Sub StartTask(stepName As String, config As FH6AutoConfig)
         If IsRunning Then
-            RaiseEvent LogReceived("Python 核心已在运行。")
+            RaiseEvent LogReceived("任务已在运行。")
             Return
         End If
 
@@ -160,7 +179,7 @@ Public Class FH6CoreBridge
         Dim coreExe = CoreExePath
         Dim coreEntry = CoreEntryPath
         If Not File.Exists(coreExe) AndAlso Not File.Exists(coreEntry) Then
-            RaiseEvent LogReceived("未找到 Python 核心入口：" & coreEntry)
+            RaiseEvent LogReceived("未找到任务执行入口：" & coreEntry)
             Return
         End If
 
@@ -201,7 +220,7 @@ Public Class FH6CoreBridge
                                                    If e.Data IsNot Nothing Then RaiseEvent LogReceived("[stderr] " & e.Data)
                                                End Sub
         AddHandler _process.Exited, Sub()
-                                        RaiseEvent LogReceived("Python 核心进程已退出。")
+                                        RaiseEvent LogReceived("任务进程已退出。")
                                         RaiseEvent StateChanged(False)
                                     End Sub
 
@@ -209,26 +228,26 @@ Public Class FH6CoreBridge
             _process.Start()
             _process.BeginOutputReadLine()
             _process.BeginErrorReadLine()
-            RaiseEvent LogReceived($"已启动 Python 核心：{stepName} ({launchKind})")
+            RaiseEvent LogReceived($"已开始任务：{stepName} ({launchKind})")
             RaiseEvent StateChanged(True)
         Catch ex As Exception
-            RaiseEvent LogReceived("启动 Python 核心失败：" & ex.Message)
+            RaiseEvent LogReceived("开始任务失败：" & ex.Message)
             RaiseEvent StateChanged(False)
         End Try
     End Sub
 
-    Public Sub StopPipeline()
+    Public Sub StopTask()
         If Not IsRunning Then
-            RaiseEvent LogReceived("当前没有正在运行的 Python 核心。")
+            RaiseEvent LogReceived("当前没有正在运行的任务。")
             RaiseEvent StateChanged(False)
             Return
         End If
 
         Try
             _process.Kill(True)
-            RaiseEvent LogReceived("已终止 Python 核心进程。")
+            RaiseEvent LogReceived("已停止任务。")
         Catch ex As Exception
-            RaiseEvent LogReceived("终止 Python 核心失败：" & ex.Message)
+            RaiseEvent LogReceived("停止任务失败：" & ex.Message)
         Finally
             RaiseEvent StateChanged(False)
         End Try

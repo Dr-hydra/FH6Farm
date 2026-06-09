@@ -1,6 +1,22 @@
 Imports System.Windows.Interop
 
 Public Class FormMain
+    Private Const WM_HOTKEY As Integer = &H312
+    Private Const HotkeyStartId As Integer = &H5101
+    Private Const HotkeyStopId As Integer = &H5102
+    Private Const ModAlt As UInteger = &H1
+    Private Const ModControl As UInteger = &H2
+    Private Const ModShift As UInteger = &H4
+    Private Const ModWin As UInteger = &H8
+    Private Const ModNoRepeat As UInteger = &H4000
+
+    <Runtime.InteropServices.DllImport("user32.dll")>
+    Private Shared Function RegisterHotKey(hwnd As IntPtr, id As Integer, modifiers As UInteger, virtualKey As UInteger) As Boolean
+    End Function
+
+    <Runtime.InteropServices.DllImport("user32.dll")>
+    Private Shared Function UnregisterHotKey(hwnd As IntPtr, id As Integer) As Boolean
+    End Function
 
     Private ReadOnly PageHost As New UiKitShellHost()
     Private PageOverview As PageUiKitRight
@@ -8,10 +24,10 @@ Public Class FormMain
     Private PageLayout As PageUiKitRight
     Private PageTheme As PageUiKitRight
     Private PageAbout As PageUiKitRight
-    Private PageNav As PageUiKitLeft
     Private IsSizeSaveable As Boolean = False
+    Private HotkeySource As HwndSource
+    Private TaskOverlay As OverlayWindow
 
-    Public PageLeft As MyPageLeft
     Public PageRight As MyPageRight
     Public Property Hidden As Boolean
 
@@ -21,7 +37,6 @@ Public Class FormMain
         ThemeCheckAll(False)
         ThemeRefresh(Settings.Get(Of Integer)("UiLauncherTheme"))
 
-        PageNav = New PageUiKitLeft()
         PageOverview = PageUiKitRight.Create(UiKitDemoPage.Overview)
         PageControls = PageUiKitRight.Create(UiKitDemoPage.Controls)
         PageLayout = PageUiKitRight.Create(UiKitDemoPage.Layout)
@@ -31,17 +46,16 @@ Public Class FormMain
         InitializeComponent()
         Opacity = 0
 
-        PanMainLeft.Child = PageNav
-        PageLeft = PageNav
         PanMainRight.Child = PageOverview
         PageRight = PageOverview
         PageHost.CurrentPage = UiKitDemoPage.Overview
-        PageNav.Configure(UiKitDemoPage.Overview, PageOverview)
         PageOverview.PageState = MyPageRight.PageStates.ContentStay
     End Sub
 
     Private Sub FormMain_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         Handle = New WindowInteropHelper(Me).Handle
+        HotkeySource = HwndSource.FromHwnd(Handle)
+        HotkeySource.AddHook(AddressOf WindowProc)
         UpdateBackgroundAndTitleBar()
         BtnExtraBack.ShowCheck = AddressOf BtnExtraBack_ShowCheck
 
@@ -63,6 +77,8 @@ Public Class FormMain
         Left = (GetWPFSize(System.Windows.Forms.Screen.PrimaryScreen.WorkingArea.Width) - Width) / 2
         IsSizeSaveable = True
         ShowWindowToTop()
+        RefreshGlobalHotkeys(CoreBridge.LoadConfig())
+        ShowTaskOverlay()
 
         AniStart({
             AaCode(Sub() AniControlEnabled = 0, 50),
@@ -71,7 +87,6 @@ Public Class FormMain
             AaDouble(Sub(i) TransformRotate.Angle += i, -TransformRotate.Angle, 500, 100, New AniEaseOutBack(AniEasePower.Weak)),
             AaCode(Sub()
                        PanBack.RenderTransform = Nothing
-                       PageNav.TriggerShowAnimation()
                        Logger.Info("FH6Auto UI started.")
                    End Sub, , True)
         }, "Form Show")
@@ -87,17 +102,111 @@ Public Class FormMain
     Public Sub UpdateBackgroundAndTitleBar()
         ShapeTitleLogo.Visibility = Visibility.Collapsed
         LabTitleLogo.Visibility = Visibility.Visible
-        LabTitleStatus.Visibility = Visibility.Visible
         ImageTitleLogo.Visibility = Visibility.Collapsed
         PanTitleSelect.Visibility = Visibility.Visible
         LabTitleLogo.Text = "FH6Auto"
-        LabTitleStatus.Text = "QING.UIKIT Frontend"
         PanTitleMain.ColumnDefinitions(0).Width = New GridLength(1, GridUnitType.Star)
     End Sub
 
     Private Sub BtnTitleClose_Click(sender As Object, e As EventArgs) Handles BtnTitleClose.Click
+        ReleaseGlobalHotkeys()
+        If TaskOverlay IsNot Nothing Then TaskOverlay.Close()
         Close()
     End Sub
+
+    Public Sub StartConfiguredTask()
+        Dim config = CoreBridge.LoadConfig()
+        CoreBridge.StartTask(config.HotkeyStartTask, config)
+    End Sub
+
+    Public Sub StopCurrentTask()
+        CoreBridge.StopTask()
+    End Sub
+
+    Public Sub ShowTaskOverlay()
+        If TaskOverlay Is Nothing OrElse Not TaskOverlay.IsLoaded Then TaskOverlay = New OverlayWindow()
+        TaskOverlay.Show()
+    End Sub
+
+    Public Sub HideTaskOverlay()
+        If TaskOverlay IsNot Nothing Then TaskOverlay.HideOverlay()
+    End Sub
+
+    Public Sub RefreshGlobalHotkeys(config As FH6AutoConfig)
+        ReleaseGlobalHotkeys()
+        If Handle = IntPtr.Zero Then Return
+
+        RegisterConfiguredHotkey(HotkeyStartId, config.StartHotkey, "开始")
+        RegisterConfiguredHotkey(HotkeyStopId, config.StopHotkey, "停止")
+        If TaskOverlay IsNot Nothing Then TaskOverlay.RefreshState()
+    End Sub
+
+    Public Sub NotifyConfigSaved(config As FH6AutoConfig)
+        RefreshGlobalHotkeys(config)
+        PageOverview.ReloadConfig()
+        PageControls.ReloadConfig()
+        PageLayout.ReloadConfig()
+        PageTheme.ReloadConfig()
+        PageAbout.ReloadConfig()
+    End Sub
+
+    Private Sub RegisterConfiguredHotkey(id As Integer, text As String, actionName As String)
+        Dim modifiers As UInteger
+        Dim virtualKey As UInteger
+        If Not TryParseHotkey(text, modifiers, virtualKey) Then
+            CoreBridge.PublishLog($"{actionName}快捷键无效：{text}")
+            Return
+        End If
+        If Not RegisterHotKey(Handle, id, modifiers Or ModNoRepeat, virtualKey) Then
+            CoreBridge.PublishLog($"{actionName}快捷键注册失败，可能已被其他程序占用：{text}")
+        End If
+    End Sub
+
+    Private Sub ReleaseGlobalHotkeys()
+        If Handle = IntPtr.Zero Then Return
+        UnregisterHotKey(Handle, HotkeyStartId)
+        UnregisterHotKey(Handle, HotkeyStopId)
+    End Sub
+
+    Private Function TryParseHotkey(text As String, ByRef modifiers As UInteger, ByRef virtualKey As UInteger) As Boolean
+        modifiers = 0
+        virtualKey = 0
+        For Each rawPart In If(text, "").Split("+"c)
+            Dim part = rawPart.Trim().ToUpperInvariant()
+            Select Case part
+                Case "CTRL", "CONTROL"
+                    modifiers = modifiers Or ModControl
+                Case "ALT"
+                    modifiers = modifiers Or ModAlt
+                Case "SHIFT"
+                    modifiers = modifiers Or ModShift
+                Case "WIN", "WINDOWS"
+                    modifiers = modifiers Or ModWin
+                Case ""
+                    Return False
+                Case Else
+                    Try
+                        Dim key = CType(New KeyConverter().ConvertFromString(part), Key)
+                        virtualKey = CUInt(KeyInterop.VirtualKeyFromKey(key))
+                    Catch
+                        Return False
+                    End Try
+            End Select
+        Next
+        Return virtualKey <> 0
+    End Function
+
+    Private Function WindowProc(hwnd As IntPtr, message As Integer, wParam As IntPtr, lParam As IntPtr, ByRef handled As Boolean) As IntPtr
+        If message <> WM_HOTKEY Then Return IntPtr.Zero
+        Select Case wParam.ToInt32()
+            Case HotkeyStartId
+                StartConfiguredTask()
+            Case HotkeyStopId
+                StopCurrentTask()
+        End Select
+        handled = True
+        Return IntPtr.Zero
+    End Function
 
     Private Sub BtnTitleMin_Click(sender As Object, e As EventArgs) Handles BtnTitleMin.Click
         WindowState = WindowState.Minimized
@@ -146,7 +255,7 @@ Public Class FormMain
         PageHost.CurrentPage = page
 
         Dim target = GetRightPage(page)
-        PageNav.Configure(page, target)
+        target.ReloadConfig()
         PageChangeAnim(target)
         Hint("已切换到：" & UiKitShellText.GetPageTitle(page))
     End Sub
@@ -190,12 +299,6 @@ Public Class FormMain
                        target.PageOnEnter()
                    End Sub, 30, True)
         }, "FrmMain PageChangeRight")
-    End Sub
-
-    Private Sub PanMainLeft_SizeChanged(sender As Object, e As SizeChangedEventArgs) Handles PanMainLeft.SizeChanged
-        If Not e.WidthChanged Then Return
-        RectLeftBackground.Width = e.NewSize.Width
-        RectLeftShadow.Opacity = If(e.NewSize.Width > 0, 1, 0)
     End Sub
 
     Public Sub ShowWindowToTop()

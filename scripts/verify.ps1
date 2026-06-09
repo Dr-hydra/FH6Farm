@@ -51,28 +51,32 @@ dotnet build ".\ui\FH6Auto.UI.sln" -c Debug
 if ($LASTEXITCODE -ne 0) { throw "WPF build failed with exit code $LASTEXITCODE" }
 
 if ($Release) {
-    Write-Host "[6/6] Build release package"
+    Write-Host "[6/6] Build release packages"
     & ".\scripts\build-release.ps1"
     if ($LASTEXITCODE -ne 0) { throw "Release package build failed with exit code $LASTEXITCODE" }
 
-    $packageDir = Join-Path $root "dist\FH6Auto.UI"
-    $coreExe = Join-Path $packageDir "FH6AutoCore.exe"
-
-    Write-Host "[release] Probe bundled core executable"
-    & $coreExe --help | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Bundled core probe failed with exit code $LASTEXITCODE" }
-
-    Write-Host "[release] Run package self-check"
-    & (Join-Path $packageDir "self-check.ps1")
-    if ($LASTEXITCODE -ne 0) { throw "Package self-check failed with exit code $LASTEXITCODE" }
+    $releaseDir = Join-Path $root "dist\release"
+    $packageDirs = Get-ChildItem -LiteralPath $releaseDir -Directory
+    if ($packageDirs.Count -ne 2) { throw "Expected two release package directories." }
+    foreach ($packageDir in $packageDirs) {
+        $fileCount = (Get-ChildItem -LiteralPath $packageDir.FullName -File).Count
+        if ($fileCount -ne 3) { throw "Expected three files in $($packageDir.Name), found $fileCount." }
+        foreach ($required in @("FH6Farm.exe", "FH6AutoCore.exe", "config.json")) {
+            if (-not (Test-Path -LiteralPath (Join-Path $packageDir.FullName $required))) {
+                throw "Missing $required in $($packageDir.Name)."
+            }
+        }
+    }
 
     Write-Host "[release] Smoke bundled core without game process"
-    $stdout = Join-Path $packageDir "core-smoke.out"
-    $stderr = Join-Path $packageDir "core-smoke.err"
+    $packageDir = $packageDirs | Where-Object { $_.Name -like "*with-runtime" } | Select-Object -First 1
+    $coreExe = Join-Path $packageDir.FullName "FH6AutoCore.exe"
+    $stdout = Join-Path $packageDir.FullName "core-smoke.out"
+    $stderr = Join-Path $packageDir.FullName "core-smoke.err"
     Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $p = Start-Process -FilePath $coreExe `
         -ArgumentList "--start race" `
-        -WorkingDirectory $packageDir `
+        -WorkingDirectory $packageDir.FullName `
         -WindowStyle Hidden `
         -RedirectStandardOutput $stdout `
         -RedirectStandardError $stderr `

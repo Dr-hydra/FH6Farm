@@ -507,7 +507,7 @@ class FH_UltimateBot(ctk.CTk):
                 "next_4": 1,
                 "global_loops": 10, 
                 "skill_dirs": ["right", "up", "up", "up", "left"],
-                "share_code": "890169683", 
+                "share_code": "890169683",
                 "auto_restart": False,
                 "restart_cmd": "start steam://run/2483190", 
                 "use_ocr": True, 
