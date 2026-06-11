@@ -123,8 +123,25 @@ Public Class PageUiKitRight
         FrmMain?.NotifyConfigSaved(CurrentConfig)
     End Sub
 
+    Public Function CaptureConfigFromUi() As FH6AutoConfig
+        Select Case Page
+            Case UiKitDemoPage.Controls
+                Return ReadFlowConfig()
+            Case UiKitDemoPage.Theme
+                Return ReadSettingsConfig()
+            Case Else
+                Return CoreBridge.LoadConfig()
+        End Select
+    End Function
+
+    Public Function SaveVisibleConfig() As FH6AutoConfig
+        Dim config = CaptureConfigFromUi()
+        SaveConfig(config)
+        Return config
+    End Function
+
     Private Sub StartStep(stepName As String)
-        CurrentConfig = CoreBridge.LoadConfig()
+        CurrentConfig = SaveVisibleConfig()
         CoreBridge.StartTask(stepName, CurrentConfig)
     End Sub
 

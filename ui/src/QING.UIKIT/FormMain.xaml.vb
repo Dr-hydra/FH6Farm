@@ -109,13 +109,18 @@ Public Class FormMain
     End Sub
 
     Private Sub BtnTitleClose_Click(sender As Object, e As EventArgs) Handles BtnTitleClose.Click
+        SaveActivePageConfig()
         ReleaseGlobalHotkeys()
         If TaskOverlay IsNot Nothing Then TaskOverlay.Close()
         Close()
     End Sub
 
+    Private Sub FormMain_Closing(sender As Object, e As ComponentModel.CancelEventArgs) Handles Me.Closing
+        SaveActivePageConfig()
+    End Sub
+
     Public Sub StartConfiguredTask()
-        Dim config = CoreBridge.LoadConfig()
+        Dim config = SaveActivePageConfig()
         CoreBridge.StartTask(config.HotkeyStartTask, config)
     End Sub
 
@@ -149,6 +154,19 @@ Public Class FormMain
         PageTheme.ReloadConfig()
         PageAbout.ReloadConfig()
     End Sub
+
+    Private Function SaveActivePageConfig() As FH6AutoConfig
+        Dim activePage = TryCast(PanMainRight.Child, PageUiKitRight)
+        If activePage IsNot Nothing Then
+            Try
+                Return activePage.SaveVisibleConfig()
+            Catch ex As Exception
+                CoreBridge.PublishLog("保存当前页面配置失败：" & ex.Message)
+            End Try
+        End If
+
+        Return CoreBridge.LoadConfig()
+    End Function
 
     Private Sub RegisterConfiguredHotkey(id As Integer, text As String, actionName As String)
         Dim modifiers As UInteger
@@ -251,11 +269,13 @@ Public Class FormMain
 
     Public Sub PageChange(page As UiKitDemoPage)
         If PageHost.CurrentPage = page Then Return
+        SaveActivePageConfig()
         PageHost.LastPage = PageHost.CurrentPage
         PageHost.CurrentPage = page
 
         Dim target = GetRightPage(page)
         target.ReloadConfig()
+        PageRight = target
         PageChangeAnim(target)
         Hint("已切换到：" & UiKitShellText.GetPageTitle(page))
     End Sub
