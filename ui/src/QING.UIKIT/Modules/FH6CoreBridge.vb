@@ -168,13 +168,11 @@ Public Class FH6CoreBridge
         RaiseEvent LogReceived("配置已保存：" & ConfigPath)
     End Sub
 
-    Public Sub StartTask(stepName As String, config As FH6AutoConfig)
+    Public Sub StartTask(stepName As String)
         If IsRunning Then
             RaiseEvent LogReceived("任务已在运行。")
             Return
         End If
-
-        SaveConfig(config)
 
         Dim coreExe = CoreExePath
         Dim coreEntry = CoreEntryPath

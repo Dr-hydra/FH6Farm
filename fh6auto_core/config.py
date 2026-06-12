@@ -91,7 +91,7 @@ def load_config(path=None):
     if not path.exists():
         return dict(DEFAULT_CONFIG)
 
-    with path.open("r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8-sig") as f:
         return normalize_config(json.load(f))
 
 
@@ -106,11 +106,9 @@ def save_config(config, path=None):
 
 def ensure_config_file(path=None):
     path = Path(path or config_path())
-    try:
-        config = load_config(path)
-    except Exception:
-        config = dict(DEFAULT_CONFIG)
-    return save_config(config, path)
+    if path.exists():
+        return load_config(path)
+    return save_config(dict(DEFAULT_CONFIG), path)
 
 
 def _int_in_range(value, fallback, minimum, maximum):
