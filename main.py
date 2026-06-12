@@ -481,18 +481,11 @@ class FH_UltimateBot(ctk.CTk):
         # 2. 读取用户的 config.json，并与底本合并（自动补全缺失项）
         if os.path.exists(ext_path):
             try:
-                with open(ext_path, "r", encoding="utf-8") as f:
+                with open(ext_path, "r", encoding="utf-8-sig") as f:
                     user_config = json.load(f)
                     self.config.update(user_config) 
             except Exception as e:
-                self.log(f"用户 config.json 损坏，已自动恢复默认配置。")
-                
-        # 3. 将最新、最完整的配置重新写回外置文件
-        try:
-            with open(ext_path, "w", encoding="utf-8") as f:
-                json.dump(self.config, f, indent=4, ensure_ascii=False)
-        except Exception:
-            pass
+                self.log(f"用户 config.json 读取失败，已保留原文件：{e}")
     
 
     def save_config(self):
@@ -1332,7 +1325,8 @@ class FH_UltimateBot(ctk.CTk):
             return
 
         self.is_running = True
-        self.save_config()
+        if not getattr(self, "headless_mode", False):
+            self.save_config()
 
         # 隐藏大窗的所有元素
         self.config_frame.pack_forget()

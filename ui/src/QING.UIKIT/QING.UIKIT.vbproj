@@ -8,9 +8,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>QING.UIKIT</RootNamespace>
     <AssemblyName>FH6Farm</AssemblyName>
-    <Version>1.2.0.0</Version>
-    <FileVersion>1.2.0.0</FileVersion>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <Version>1.2.0.1</Version>
+    <FileVersion>1.2.0.1</FileVersion>
+    <AssemblyVersion>1.2.0.1</AssemblyVersion>
     <MyType>Custom</MyType>
     <StartupObject>QING.UIKIT.Application</StartupObject>
     <ApplicationIcon>Images\icon.ico</ApplicationIcon>

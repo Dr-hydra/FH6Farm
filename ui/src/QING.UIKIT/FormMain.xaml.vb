@@ -121,7 +121,7 @@ Public Class FormMain
 
     Public Sub StartConfiguredTask()
         Dim config = SaveActivePageConfig()
-        CoreBridge.StartTask(config.HotkeyStartTask, config)
+        CoreBridge.StartTask(config.HotkeyStartTask)
     End Sub
 
     Public Sub StopCurrentTask()

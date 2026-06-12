@@ -136,13 +136,15 @@ Public Class PageUiKitRight
 
     Public Function SaveVisibleConfig() As FH6AutoConfig
         Dim config = CaptureConfigFromUi()
-        SaveConfig(config)
+        If Page = UiKitDemoPage.Controls OrElse Page = UiKitDemoPage.Theme Then
+            SaveConfig(config)
+        End If
         Return config
     End Function
 
     Private Sub StartStep(stepName As String)
         CurrentConfig = SaveVisibleConfig()
-        CoreBridge.StartTask(stepName, CurrentConfig)
+        CoreBridge.StartTask(stepName)
     End Sub
 
     Private Sub BtnStartRace_Click(sender As Object, e As MouseButtonEventArgs)
