@@ -30,5 +30,8 @@
     "calc_c": "30",
     "start_hotkey": "F7",
     "stop_hotkey": "F8",
-    "hotkey_start_task": "race"
+    "hotkey_start_task": "race",
+    "cj_mode": 1,
+    "auto_close_game": false,
+    "auto_shutdown": false
 }

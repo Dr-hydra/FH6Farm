@@ -21,6 +21,9 @@ DEFAULT_CONFIG = {
     "auto_restart": False,
     "restart_cmd": "start steam://run/2483190",
     "sell_mode": 1,
+    "cj_mode": 1,
+    "auto_close_game": False,
+    "auto_shutdown": False,
     "use_ocr": False,
     "ocr_lang": "简体中文",
     "calc_a": "",
@@ -59,10 +62,11 @@ def normalize_config(raw):
     for key in ("next_1", "next_2", "next_3", "next_4"):
         config[key] = _int_in_range(config.get(key), DEFAULT_CONFIG[key], 1, 4)
 
-    for key in ("chk_1", "chk_2", "chk_3", "chk_4", "auto_restart", "use_ocr"):
+    for key in ("chk_1", "chk_2", "chk_3", "chk_4", "auto_restart", "auto_close_game", "auto_shutdown", "use_ocr"):
         config[key] = bool(config.get(key))
 
     config["sell_mode"] = 2 if str(config.get("sell_mode")) == "2" else 1
+    config["cj_mode"] = 2 if str(config.get("cj_mode")) == "2" else 1
     config["share_code"] = _digits(config.get("share_code"), DEFAULT_CONFIG["share_code"])
     config["restart_cmd"] = str(config.get("restart_cmd") or DEFAULT_CONFIG["restart_cmd"]).strip()
     config["ocr_lang"] = str(config.get("ocr_lang") or DEFAULT_CONFIG["ocr_lang"]).strip()
