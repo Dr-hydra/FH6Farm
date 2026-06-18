@@ -28,5 +28,8 @@
     "calc_a": "1000000",
     "calc_b": "81700",
     "calc_c": "30",
-    "sell_mode": 1
+    "sell_mode": 1,
+    "cj_mode": 1,
+    "auto_close_game": false,
+    "auto_shutdown": false
 }
