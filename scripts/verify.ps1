@@ -24,13 +24,11 @@ if ($LASTEXITCODE -ne 0) { throw "Config validation failed with exit code $LASTE
 
 Write-Host "[2/6] Check Python runtime imports"
 @'
-import customtkinter
 import cv2
 import numpy
 import pyautogui
 import pydirectinput
 import requests
-import pynput
 import PIL
 import win32gui
 print("runtime imports ok")

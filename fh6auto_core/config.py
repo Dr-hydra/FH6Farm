@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from .skill_path import normalize_skill_dirs
+
 
 DEFAULT_CONFIG = {
     "race_count": 99,
@@ -82,10 +84,7 @@ def normalize_config(raw):
     skill_dirs = config.get("skill_dirs")
     if not isinstance(skill_dirs, list):
         skill_dirs = DEFAULT_CONFIG["skill_dirs"]
-    config["skill_dirs"] = [
-        item for item in (str(x).strip().lower() for x in skill_dirs)
-        if item in {"up", "down", "left", "right"}
-    ]
+    config["skill_dirs"] = normalize_skill_dirs(skill_dirs)
 
     return config
 

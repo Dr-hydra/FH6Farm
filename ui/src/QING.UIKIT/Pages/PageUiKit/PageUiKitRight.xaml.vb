@@ -54,11 +54,14 @@ Public Class PageUiKitRight
         TxtGlobalLoops.Text = CurrentConfig.GlobalLoops.ToString()
         LoadSkillPath(CurrentConfig.SkillDirs)
         ChkAutoRestart.Checked = CurrentConfig.AutoRestart
+        ChkAutoCloseGame.Checked = CurrentConfig.AutoCloseGame
+        ChkAutoShutdown.Checked = CurrentConfig.AutoShutdown
         TxtRestartCmd.Text = CurrentConfig.RestartCommand
         TxtCalcA.Text = CurrentConfig.CalcA
         TxtCalcB.Text = CurrentConfig.CalcB
         TxtCalcC.Text = CurrentConfig.CalcC
         CmbSellMode.SelectedIndex = If(CurrentConfig.SellMode = 2, 1, 0)
+        CmbCjMode.SelectedIndex = If(CurrentConfig.CjMode = 2, 1, 0)
         TxtStartHotkey.Text = CurrentConfig.StartHotkey
         TxtStopHotkey.Text = CurrentConfig.StopHotkey
         CmbHotkeyStartTask.SelectedIndex = TaskIndex(CurrentConfig.HotkeyStartTask)
@@ -94,8 +97,11 @@ Public Class PageUiKitRight
     Private Function ReadSettingsConfig() As FH6AutoConfig
         Dim cfg = CoreBridge.LoadConfig()
         cfg.AutoRestart = ChkAutoRestart.Checked
+        cfg.AutoCloseGame = ChkAutoCloseGame.Checked
+        cfg.AutoShutdown = ChkAutoShutdown.Checked
         cfg.RestartCommand = If(TxtRestartCmd.Text, "").Trim()
         cfg.SellMode = If(CmbSellMode.SelectedIndex = 1, 2, 1)
+        cfg.CjMode = If(CmbCjMode.SelectedIndex = 1, 2, 1)
         cfg.CalcA = If(TxtCalcA.Text, "").Trim()
         cfg.CalcB = If(TxtCalcB.Text, "81700").Trim()
         cfg.CalcC = If(TxtCalcC.Text, "30").Trim()
@@ -109,6 +115,12 @@ Public Class PageUiKitRight
         Dim value As Integer
         If Not Integer.TryParse(OnlyDigits(raw, fallback.ToString()), value) Then value = fallback
         Return Math.Max(min, Math.Min(max, value))
+    End Function
+
+    Private Function ReadLong(raw As String, fallback As Long) As Long
+        Dim value As Long
+        If Not Long.TryParse(OnlyDigits(raw, fallback.ToString()), value) Then value = fallback
+        Return value
     End Function
 
     Private Function OnlyDigits(raw As String, fallback As String) As String
@@ -170,6 +182,33 @@ Public Class PageUiKitRight
     Private Sub BtnSaveConfig_Click(sender As Object, e As MouseButtonEventArgs)
         SaveConfig(ReadSettingsConfig())
         Hint("配置已保存。", HintType.Green)
+    End Sub
+
+    Private Sub BtnCalculatePipeline_Click(sender As Object, e As MouseButtonEventArgs)
+        Dim targetCr = ReadLong(TxtCalcA.Text, 0)
+        Dim costPerCar = ReadLong(TxtCalcB.Text, 81700)
+        Dim spPerCar = ReadLong(TxtCalcC.Text, 30)
+
+        If targetCr <= 0 Then
+            Hint("未输入有效目标 CR。", HintType.Red)
+            Return
+        End If
+
+        Try
+            Dim result = FH6PipelineCalculator.Calculate(targetCr, costPerCar, spPerCar)
+            Dim cfg = ReadSettingsConfig()
+            cfg.RaceCount = result.RaceCount
+            cfg.BuyCount = result.ActionCount
+            cfg.CjCount = result.ActionCount
+            cfg.ScCount = result.ActionCount
+            cfg.GlobalLoops = result.GlobalLoops
+
+            SaveConfig(cfg)
+            LoadConfigToUi()
+            Hint($"已应用：{result.GlobalLoops} 个大循环，每轮跑图 {result.RaceCount} 次，动作 {result.ActionCount} 辆。", HintType.Green)
+        Catch ex As Exception
+            Hint(ex.Message, HintType.Red)
+        End Try
     End Sub
 
     Private Sub BtnReloadConfig_Click(sender As Object, e As MouseButtonEventArgs)
@@ -266,21 +305,13 @@ Public Class PageUiKitRight
 
     Private Sub ResetSkillPath()
         SkillPathCells.Clear()
-        SkillPathCells.Add(12)
+        SkillPathCells.Add(FH6SkillPath.StartCell)
         RefreshSkillPathGrid()
     End Sub
 
     Private Sub LoadSkillPath(directions As IEnumerable(Of String))
         SkillPathCells.Clear()
-        SkillPathCells.Add(12)
-        Dim current = 12
-
-        For Each direction In If(directions, Enumerable.Empty(Of String)())
-            Dim nextCell = MoveCell(current, direction)
-            If nextCell < 0 OrElse SkillPathCells.Contains(nextCell) Then Exit For
-            SkillPathCells.Add(nextCell)
-            current = nextCell
-        Next
+        SkillPathCells.AddRange(FH6SkillPath.DirectionsToCells(directions))
         RefreshSkillPathGrid()
     End Sub
 
@@ -288,7 +319,7 @@ Public Class PageUiKitRight
         Dim button = TryCast(sender, Button)
         If button Is Nothing Then Return
         Dim index = CInt(button.Tag)
-        If SkillPathCells.Contains(index) OrElse Not AreAdjacent(SkillPathCells.Last(), index) Then Return
+        If SkillPathCells.Contains(index) OrElse Not FH6SkillPath.AreAdjacent(SkillPathCells.Last(), index) Then Return
         SkillPathCells.Add(index)
         RefreshSkillPathGrid()
     End Sub
@@ -310,62 +341,19 @@ Public Class PageUiKitRight
                 button.Content = ""
                 button.Background = Brushes.Transparent
                 button.Foreground = New SolidColorBrush(Color.FromRgb(&H28, &H8B, &HEF))
-                button.BorderBrush = If(AreAdjacent(endpoint, index),
+                button.BorderBrush = If(FH6SkillPath.AreAdjacent(endpoint, index),
                                         New SolidColorBrush(Color.FromRgb(&H28, &H8B, &HEF)),
                                         New SolidColorBrush(Color.FromRgb(&HC9, &HD1, &HD9)))
-                button.IsEnabled = AreAdjacent(endpoint, index)
+                button.IsEnabled = FH6SkillPath.AreAdjacent(endpoint, index)
             End If
         Next
 
         Dim directions = SkillPathToDirections()
         LabSkillPath.Text = $"已选择 {SkillPathCells.Count} 格" &
-            If(directions.Count = 0, "，当前仅包含起点。", $"，方向：{String.Join(" → ", directions.Select(AddressOf DirectionName))}")
+            If(directions.Count = 0, "，当前仅包含起点。", $"，方向：{String.Join(" → ", directions.Select(Function(direction) FH6SkillPath.DirectionName(direction)))}")
     End Sub
 
     Private Function SkillPathToDirections() As List(Of String)
-        Dim result As New List(Of String)
-        For index = 1 To SkillPathCells.Count - 1
-            Dim previous = SkillPathCells(index - 1)
-            Dim current = SkillPathCells(index)
-            Dim rowChange = current \ 4 - previous \ 4
-            Dim columnChange = current Mod 4 - previous Mod 4
-            If rowChange = -1 Then result.Add("up")
-            If rowChange = 1 Then result.Add("down")
-            If columnChange = -1 Then result.Add("left")
-            If columnChange = 1 Then result.Add("right")
-        Next
-        Return result
-    End Function
-
-    Private Function MoveCell(current As Integer, direction As String) As Integer
-        Select Case If(direction, "").Trim().ToLowerInvariant()
-            Case "up"
-                Return If(current \ 4 > 0, current - 4, -1)
-            Case "down"
-                Return If(current \ 4 < 3, current + 4, -1)
-            Case "left"
-                Return If(current Mod 4 > 0, current - 1, -1)
-            Case "right"
-                Return If(current Mod 4 < 3, current + 1, -1)
-            Case Else
-                Return -1
-        End Select
-    End Function
-
-    Private Function AreAdjacent(first As Integer, second As Integer) As Boolean
-        Return Math.Abs(first \ 4 - second \ 4) + Math.Abs(first Mod 4 - second Mod 4) = 1
-    End Function
-
-    Private Function DirectionName(direction As String) As String
-        Select Case direction
-            Case "up"
-                Return "上"
-            Case "down"
-                Return "下"
-            Case "left"
-                Return "左"
-            Case Else
-                Return "右"
-        End Select
+        Return FH6SkillPath.CellsToDirections(SkillPathCells)
     End Function
 End Class

@@ -296,7 +296,6 @@ FH6Farm 基于 FH6Auto 的自动化实现继续开发，是一个围绕游戏界
 
 自动化核心主要基于以下 Python 技术栈：
 
-- **customtkinter**：现代化桌面 UI
 - **opencv-python**：模板匹配 / 图像识别
 - **numpy**：图像数组处理
 - **pyautogui**：截图与基础自动化
@@ -306,7 +305,7 @@ FH6Farm 基于 FH6Auto 的自动化实现继续开发，是一个围绕游戏界
 - **PIL**：资源图像加载
 - **requests**：版本更新检查
 
-新的桌面前端使用：
+桌面前端使用：
 
 - **VB.NET / WPF**：主窗口、配置界面与悬浮窗
 - **QING.UIKIT**：控件、主题与窗口框架

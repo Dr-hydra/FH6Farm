@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fh6auto_core.config import ensure_config_file, load_config
+from fh6auto_core.config import DEFAULT_CONFIG, ensure_config_file, load_config
 
 
 class ConfigFileTests(unittest.TestCase):
@@ -38,6 +38,16 @@ class ConfigFileTests(unittest.TestCase):
             config = load_config(path)
 
             self.assertEqual(777, config["race_count"])
+
+    def test_missing_config_uses_shared_wpf_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "config.json"
+
+            config = load_config(path)
+
+            self.assertEqual(DEFAULT_CONFIG["next_3"], config["next_3"])
+            self.assertEqual(4, config["next_3"])
+            self.assertEqual("race", config["hotkey_start_task"])
 
 
 if __name__ == "__main__":

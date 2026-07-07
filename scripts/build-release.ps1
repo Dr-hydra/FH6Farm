@@ -54,7 +54,6 @@ Write-Host "[1/5] Build Python automation core"
     --workpath $pyWork `
     --specpath $pyWork `
     --icon "$root\assets\icon.ico" `
-    --collect-data customtkinter `
     --add-data "$root\assets;assets" `
     --add-data "$root\images;images" `
     ".\fh6auto_core_launcher.py"

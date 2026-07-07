@@ -57,6 +57,15 @@ Public Class FH6AutoConfig
     <JsonPropertyName("sell_mode")>
     Public Property SellMode As Integer = 1
 
+    <JsonPropertyName("cj_mode")>
+    Public Property CjMode As Integer = 1
+
+    <JsonPropertyName("auto_close_game")>
+    Public Property AutoCloseGame As Boolean = False
+
+    <JsonPropertyName("auto_shutdown")>
+    Public Property AutoShutdown As Boolean = False
+
     <JsonPropertyName("use_ocr")>
     Public Property UseOcr As Boolean = False
 

@@ -4,8 +4,8 @@ This branch keeps the Python automation core and adds a VB.NET/WPF frontend base
 
 ## Architecture
 
-- `main.py`: legacy CustomTkinter app and current automation implementation.
-- `fh6auto_core/`: headless entry and shared non-UI helpers.
+- `main.py`: thin compatibility launcher that delegates to the headless core.
+- `fh6auto_core/`: headless automation core, task pipeline, vision, input, recovery, config, and packaging helpers.
 - `ui/FH6Auto.UI.sln`: WPF frontend using QING.UIKIT controls and shell.
 - `ui/src/QING.UIKIT/Modules/FH6CoreBridge.vb`: starts and stops the Python core process.
 - `FH6AutoCore.exe`: bundled PyInstaller headless core generated in release packages.
